@@ -12,6 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const quizFooter = document.getElementById('quiz-footer');
     const statusMessage = document.getElementById('status-message');
     const resetButton = document.getElementById('reset-button');
+    const menuButton = document.getElementById('menu-button');
+    const sidebar = document.getElementById('sidebar');
 
     // --- State Aplikasi ---
     let questionnaireState = {
@@ -27,12 +29,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
     const isAuthPage = path === '/login' || path === '/register';
     
+    // --- AUTHENTICATION DISABLED FOR DEVELOPMENT ---
+    // Bagian ini dinonaktifkan agar bisa melihat halaman internal tanpa login.
+    // Aktifkan kembali untuk mode produksi.
     if (!isAuthPage) { // Jika ini BUKAN halaman login/register, maka ini adalah halaman yang dilindungi
-        if (!token) {
-            window.location.href = '/login';
-            return; // Hentikan eksekusi jika tidak ada token
-        }
-        // Ambil data pengguna untuk semua halaman yang dilindungi
+        // if (!token) {
+        //     window.location.href = '/login';
+        //     return; // Hentikan eksekusi jika tidak ada token
+        // }
         fetchUserProfile();
     }
 
@@ -47,6 +51,20 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchUserProfile();
     } else if (loginForm) {
         // Event listener untuk form login sudah ada di bawah
+    }
+
+    // --- Logika untuk Sidebar Responsif ---
+    if (menuButton && sidebar) {
+        menuButton.addEventListener('click', () => {
+            sidebar.classList.toggle('-translate-x-full');
+        });
+
+        // Menutup sidebar jika mengklik di luar area sidebar (opsional)
+        document.addEventListener('click', (e) => {
+            if (!sidebar.contains(e.target) && !menuButton.contains(e.target)) {
+                sidebar.classList.add('-translate-x-full');
+            }
+        });
     }
 
     if (loginForm) {
@@ -169,6 +187,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 errorMessage.textContent = 'Terjadi kesalahan. Silakan coba lagi.';
                 errorMessage.classList.remove('hidden');
             }
+        });
+
+        // --- Logic for 'Lainnya' (Other) fields ---
+        function toggleOther(selectElement, otherInputId) {
+            const otherInput = document.getElementById(otherInputId);
+            if (!otherInput) return;
+
+            if (selectElement.value === 'Lainnya') {
+                otherInput.style.display = 'block';
+                otherInput.required = true;
+            } else {
+                otherInput.style.display = 'none';
+                otherInput.required = false;
+                otherInput.value = '';
+            }
+        }
+        document.getElementById('status_pegawai')?.addEventListener('change', (e) => {
+            toggleOther(e.target, 'status_pegawai_other');
+        });
+        document.getElementById('jabatan')?.addEventListener('change', (e) => {
+            toggleOther(e.target, 'jabatan_other');
         });
     }
 

@@ -10,43 +10,224 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Poppins', sans-serif; }
+        
+        /* Updated background gradient to match login form */
+        .wellness-bg {
+            background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 50%, #fef3c7 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .wellness-bg::before {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(34, 197, 94, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            top: -50px;
+            left: -50px;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .wellness-bg::after {
+            content: '';
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            bottom: -30px;
+            right: -30px;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(20px); }
+        }
+        
+        .shape-accent {
+            position: absolute;
+            opacity: 0.15;
+        }
+        
+        .shape-circle {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #22c55e, #3b82f6);
+            border-radius: 50%;
+        }
+        
+        .shape-square {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #f97316, #eab308);
+            border-radius: 12px;
+            transform: rotate(45deg);
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            border: 2px solid rgba(34, 197, 94, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+        
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #22c55e, #3b82f6, #f97316);
+            border-radius: 24px 24px 0 0;
+        }
+        
+        .icon-container {
+            background: linear-gradient(135deg, #dcfce7 0%, #dbeafe 100%);
+            border-radius: 20px;
+            padding: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.15);
+        }
+        
+        .input-field {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+            background-color: #f0fdf4;
+        }
+        
+        .btn-login {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 600;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+            width: 100%;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+        }
+        
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        
+        .link-register {
+            color: #22c55e;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .link-register::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #22c55e;
+            transition: width 0.3s ease;
+        }
+        
+        /* Added wellness quote section for consistency */
+        .wellness-quote {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.05), rgba(59, 130, 246, 0.05));
+            border-left: 4px solid #22c55e;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 24px; /* Adjusted margin for register page */
+            font-size: 13px;
+            color: #475569;
+            font-style: italic;
+        }
+
+        .link-register:hover::after {
+            width: 100%;
+        }
+
+        #shape-top-left {
+            top: 10%;
+            left: 5%;
+        }
+
+        #shape-bottom-right {
+            bottom: 15%;
+            right: 8%;
+        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-emerald-50 to-cyan-100 flex items-center justify-center min-h-screen">
+<body class="wellness-bg flex items-center justify-center min-h-screen p-4">
+    <div id="shape-top-left" class="shape-accent">
+        <div class="shape-circle"></div>
+    </div>
+    <div id="shape-bottom-right" class="shape-accent">
+        <div class="shape-square"></div>
+    </div>
 
-    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-sm">
-        <div class="flex justify-center mb-6">
-            <div class="rounded-full bg-emerald-100 p-3">
-                <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+    <div class="login-card w-full max-w-lg p-6 sm:p-10">
+        <div class="flex justify-center mb-8">
+            <div class="icon-container">
+                <svg class="w-10 h-10 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
             </div>
         </div>
-        <h2 class="text-2xl font-bold mb-6 text-center text-slate-800">Buat Akun Baru</h2>
+        <h2 class="text-3xl font-bold mb-2 text-center text-slate-800">Buat Akun Baru</h2>
+        <p class="text-center text-slate-500 text-sm mb-6">Mulai perjalanan kesejahteraan Anda hari ini</p>
         
         <div id="error-message" class="p-4 mb-4 text-sm rounded-lg bg-red-100 text-red-700 hidden" role="alert"></div>
 
         <form id="register-form" action="#">
-            <div class="mb-4">
-                <label for="email" class="block text-slate-700 text-sm font-medium mb-2">Email</label>
+            <div class="mb-5">
+                <label for="email" class="block text-slate-700 text-sm font-semibold mb-3">Email</label>
                 <input type="email" id="email" name="email" required autocomplete="email"
-                class="appearance-none border border-slate-300 rounded-lg w-full py-2 px-3 text-slate-700 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                    class="input-field w-full text-slate-700 leading-tight"
+                    placeholder="nama@email.com">
             </div>
             <div class="mb-6">
-                <label for="password" class="block text-slate-700 text-sm font-medium mb-2">Password</label>
+                <label for="password" class="block text-slate-700 text-sm font-semibold mb-3">Password</label>
                 <input type="password" id="password" name="password" required autocomplete="new-password"
-                class="appearance-none border border-slate-300 rounded-lg w-full py-2 px-3 text-slate-700 mb-3 leading-tight focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                    class="input-field w-full text-slate-700 leading-tight"
+                    placeholder="••••••••">
             </div>
-            <div class="flex items-center justify-between">
-                <button type="submit"
-                        class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:shadow-outline w-full transition duration-150">
-                    Daftar
-                </button>
-            </div>
+            
+            <button type="submit" class="btn-login">
+                Daftar
+            </button>
         </form>
+
+        <!-- Added wellness quote -->
+        <div class="wellness-quote">
+            💚 "Mengambil langkah pertama adalah bagian terpenting dari perjalanan menuju kesejahteraan diri."
+        </div>
 
         <div class="mt-6 text-center">
             <p class="text-gray-600 text-sm">
                 Sudah punya akun?
-                <a href="/login" class="font-medium text-emerald-600 hover:text-emerald-700">Masuk di sini</a>
+                <a href="/login" class="link-register">Masuk di sini</a>
             </p>
         </div>
     </div>

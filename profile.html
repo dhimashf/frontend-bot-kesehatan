@@ -13,102 +13,357 @@
             font-family: 'Poppins', sans-serif; 
             scroll-behavior: smooth;
         }
+        
+        /* Updated background gradient to match dashboard */
+        .gradient-bg {
+            background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 50%, #fef3c7 100%);
+            animation: gradientShift 15s ease infinite;
+            background-size: 400% 400%;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Decorative floating shapes */
+        .floating-shape {
+            position: fixed;
+            opacity: 0.1;
+            pointer-events: none;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        /* Enhanced card styling with gradient border */
+        .card-gradient-border {
+            position: relative;
+            background: white;
+            border-radius: 0.75rem;
+        }
+        
+        .card-gradient-border::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #22c55e 0%, #3b82f6 50%, #f97316 100%);
+            border-radius: 0.75rem 0.75rem 0 0;
+        }
+        
+        /* Smooth transitions */
+        .transition-smooth {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        #profile-shape-1 {
+            width: 300px;
+            height: 300px;
+            background: #22c55e;
+            border-radius: 50%;
+            top: 10%;
+            left: 5%;
+        }
+
+        #profile-shape-2 {
+            width: 200px;
+            height: 200px;
+            background: #3b82f6;
+            border-radius: 50%;
+            bottom: 20%;
+            right: 10%;
+            animation-delay: 2s;
+        }
+
+        #profile-shape-3 {
+            width: 150px;
+            height: 150px;
+            background: #f97316;
+            top: 50%;
+            right: 5%;
+            animation-delay: 4s;
+        }
+
+        /* Enhanced sidebar styling with green gradient and decorative elements */
+        .sidebar-gradient {
+            background: linear-gradient(180deg, #065f46 0%, #047857 50%, #059669 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .sidebar-gradient::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 5s ease-in-out infinite;
+        }
+        
+        .sidebar-gradient::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 7s ease-in-out infinite reverse;
+        }
+
+        /* Enhanced nav items with hover effects */
+        .nav-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+        }
+        
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 0 4px 4px 0;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(4px);
+        }
+        
+        .nav-item:hover::before {
+            opacity: 1;
+        }
+        
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .nav-item.active::before {
+            opacity: 1;
+        }
+
+        /* Enhanced user profile card */
+        .user-profile-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 24px;
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(10px);
+        }
+        
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #22c55e 0%, #3b82f6 100%);
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
     </style>
 </head>
-<body class="bg-slate-100">
+<body class="gradient-bg">
+    <!-- Added decorative shapes -->
+    <div id="profile-shape-1" class="floating-shape"></div>
+    <div id="profile-shape-2" class="floating-shape"></div>
+    <div id="profile-shape-3" class="floating-shape"></div>
 
-    <div class="flex h-screen">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-emerald-800 text-white flex flex-col p-4">
-            <div class="text-center mb-10">
-                <div class="w-24 h-24 rounded-full bg-emerald-600 mx-auto flex items-center justify-center text-4xl font-bold mb-2 border-4 border-emerald-500">
+    <div class="relative min-h-screen md:flex">
+        <!-- Sidebar with green gradient to match dashboard -->
+        <aside id="sidebar" class="w-64 sidebar-gradient text-white flex-col p-6 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 md:flex transition-transform duration-300 ease-in-out z-30">
+            <!-- Enhanced user profile card -->
+            <div class="user-profile-card">
+                <div class="user-avatar">
                     <span id="user-initial"></span>
                 </div>
-                <h2 id="user-username" class="text-xl font-semibold"></h2>
+                <h2 id="user-username" class="text-lg font-semibold text-white"></h2>
+                <p class="text-sm text-emerald-100 mt-1">Kesejahteraan Anda adalah prioritas kami</p>
             </div>
-            <nav class="flex-grow">
-                <a href="/profile" class="block py-3 px-4 rounded-lg bg-emerald-700 font-bold transition duration-150 mb-2">
-                    Profil & Riwayat
+            
+            <nav class="flex-grow space-y-2">
+                <!-- Enhanced navigation with nav-item class -->
+                <a href="/profile" class="nav-item active bg-emerald-700 font-bold">
+                    <span class="text-xl">👤</span>
+                    <span>Profil & Riwayat</span>
                 </a>
-                <a href="/" class="block py-3 px-4 rounded-lg hover:bg-emerald-700 transition duration-150">
-                    Kuesioner
+                <a href="/" class="nav-item hover:bg-emerald-700">
+                    <span class="text-xl">📋</span>
+                    <span>Kuesioner</span>
                 </a>
             </nav>
             <div class="mt-auto">
-                <button id="logout-button" class="block w-full text-center py-3 px-4 rounded-lg bg-red-600 hover:bg-red-700 transition duration-150">
-                    Keluar
+                <!-- Enhanced logout button with gradient -->
+                <button id="logout-button" class="block w-full text-center py-3 px-4 rounded-lg bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition-smooth hover-lift font-semibold shadow-md">
+                    🚪 Keluar
                 </button>
             </div>
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 p-6 lg:p-10 overflow-y-auto">
-            <h1 class="text-3xl font-bold text-slate-800 mb-8">Profil & Riwayat</h1>
+        <main class="flex-1 p-4 sm:p-6 lg:p-10 overflow-y-auto">
+            <!-- Enhanced header with gradient text -->
+            <div class="mb-8">
+                <div class="flex items-center gap-4">
+                    <button id="menu-button" aria-label="Buka menu" class="md:hidden text-slate-600 hover:text-slate-800">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                    </button>
+                    <h1 class="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">Profil & Riwayat</h1>
+                </div>
+                <p class="text-slate-600">Kelola data identitas dan lihat riwayat hasil kuesioner Anda</p>
+            </div>
 
             <!-- Data Identitas Pengguna -->
-            <div id="profile-loading" class="text-center p-8 bg-gray-50 rounded-lg shadow-inner">
+            <div id="profile-loading" class="text-center p-8 bg-white rounded-xl shadow-lg border-t-4 border-emerald-400">
                 <p class="text-slate-600">Memuat data profil...</p>
             </div>
-            <div id="profile-container" class="bg-white p-6 rounded-xl shadow-lg mb-8 border-t-4 border-emerald-500 hidden">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-emerald-800">Data Identitas</h2>
-                    <button id="edit-profile-btn" class="text-sm bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-lg transition duration-150">Edit Profil</button>
+            
+            <!-- Enhanced profile container with gradient border and modern styling -->
+            <div id="profile-container" class="card-gradient-border p-8 rounded-xl shadow-xl mb-8 hidden hover-lift transition-smooth">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-blue-500 bg-clip-text text-transparent">Data Identitas</h2>
+                    <!-- Updated button to green gradient -->
+                    <button id="edit-profile-btn" class="text-sm bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition-smooth hover-lift shadow-md">
+                        ✏️ Edit Profil
+                    </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm text-slate-700">
-                    <div><strong class="font-medium text-slate-500 block">Email:</strong> <span id="profile-email"></span></div>
-                    <div><strong class="font-medium text-slate-500 block">Inisial:</strong> <span id="profile-inisial"></span></div>
-                    <div><strong class="font-medium text-slate-500 block">No Kontak:</strong> <span id="profile-no_wa"></span></div>
-                    <div><strong class="font-medium text-slate-500 block">Usia:</strong> <span id="profile-usia"></span></div>
-                    <div><strong class="font-medium text-slate-500 block">Jenis Kelamin:</strong> <span id="profile-jenis_kelamin"></span></div>
-                    <div><strong class="font-medium text-slate-500 block">Pendidikan:</strong> <span id="profile-pendidikan"></span></div>
-                    <div><strong class="font-medium text-slate-500 block">Lama Bekerja:</strong> <span id="profile-lama_bekerja"></span></div>
-                    <div><strong class="font-medium text-slate-500 block">Status Pegawai:</strong> <span id="profile-status_pegawai"></span></div>
-                    <div><strong class="font-medium text-slate-500 block">Jabatan:</strong> <span id="profile-jabatan"></span></div>
-                    <div><strong class="font-medium text-slate-500 block">Unit/Ruangan:</strong> <span id="profile-unit_ruangan"></span></div>
-                    <div><strong class="font-medium text-slate-500 block">Status Perkawinan:</strong> <span id="profile-status_perkawinan"></span></div>
-                    <div><strong class="font-medium text-slate-500 block">Status Kehamilan:</strong> <span id="profile-status_kehamilan"></span></div>
-                    <div><strong class="font-medium text-slate-500 block">Jumlah Anak:</strong> <span id="profile-jumlah_anak"></span></div>
+                <!-- Improved grid layout with better spacing and styling -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="p-4 bg-gradient-to-br from-emerald-50 to-blue-50 rounded-lg border-l-4 border-emerald-400">
+                        <strong class="font-semibold text-emerald-700 block text-sm">Email</strong>
+                        <span id="profile-email" class="text-slate-700 font-medium"></span>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-blue-50 to-emerald-50 rounded-lg border-l-4 border-blue-400">
+                        <strong class="font-semibold text-blue-700 block text-sm">Inisial</strong>
+                        <span id="profile-inisial" class="text-slate-700 font-medium"></span>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-orange-50 to-emerald-50 rounded-lg border-l-4 border-orange-400">
+                        <strong class="font-semibold text-orange-700 block text-sm">No Kontak</strong>
+                        <span id="profile-no_wa" class="text-slate-700 font-medium"></span>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-emerald-50 to-orange-50 rounded-lg border-l-4 border-emerald-400">
+                        <strong class="font-semibold text-emerald-700 block text-sm">Usia</strong>
+                        <span id="profile-usia" class="text-slate-700 font-medium"></span>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-blue-50 to-orange-50 rounded-lg border-l-4 border-blue-400">
+                        <strong class="font-semibold text-blue-700 block text-sm">Jenis Kelamin</strong>
+                        <span id="profile-jenis_kelamin" class="text-slate-700 font-medium"></span>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-orange-50 to-blue-50 rounded-lg border-l-4 border-orange-400">
+                        <strong class="font-semibold text-orange-700 block text-sm">Pendidikan</strong>
+                        <span id="profile-pendidikan" class="text-slate-700 font-medium"></span>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-emerald-50 to-blue-50 rounded-lg border-l-4 border-emerald-400">
+                        <strong class="font-semibold text-emerald-700 block text-sm">Lama Bekerja</strong>
+                        <span id="profile-lama_bekerja" class="text-slate-700 font-medium"></span>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-blue-50 to-emerald-50 rounded-lg border-l-4 border-blue-400">
+                        <strong class="font-semibold text-blue-700 block text-sm">Status Pegawai</strong>
+                        <span id="profile-status_pegawai" class="text-slate-700 font-medium"></span>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-orange-50 to-emerald-50 rounded-lg border-l-4 border-orange-400">
+                        <strong class="font-semibold text-orange-700 block text-sm">Jabatan</strong>
+                        <span id="profile-jabatan" class="text-slate-700 font-medium"></span>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-emerald-50 to-orange-50 rounded-lg border-l-4 border-emerald-400">
+                        <strong class="font-semibold text-emerald-700 block text-sm">Unit/Ruangan</strong>
+                        <span id="profile-unit_ruangan" class="text-slate-700 font-medium"></span>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-blue-50 to-orange-50 rounded-lg border-l-4 border-blue-400">
+                        <strong class="font-semibold text-blue-700 block text-sm">Status Perkawinan</strong>
+                        <span id="profile-status_perkawinan" class="text-slate-700 font-medium"></span>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-orange-50 to-blue-50 rounded-lg border-l-4 border-orange-400">
+                        <strong class="font-semibold text-orange-700 block text-sm">Status Kehamilan</strong>
+                        <span id="profile-status_kehamilan" class="text-slate-700 font-medium"></span>
+                    </div>
+                    <div class="p-4 bg-gradient-to-br from-emerald-50 to-blue-50 rounded-lg border-l-4 border-emerald-400">
+                        <strong class="font-semibold text-emerald-700 block text-sm">Jumlah Anak</strong>
+                        <span id="profile-jumlah_anak" class="text-slate-700 font-medium"></span>
+                    </div>
                 </div>
             </div>
-            <div id="profile-empty" class="text-center p-8 bg-gray-50 rounded-lg shadow-inner hidden">
-                <p class="text-slate-600">Anda belum melengkapi data identitas.</p>
-                <a href="/identity_form" class="mt-4 inline-block bg-emerald-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-emerald-600 transition duration-150">
-                    Lengkapi Sekarang
+            
+            <!-- Enhanced empty state with gradient background -->
+            <div id="profile-empty" class="text-center p-8 bg-white rounded-xl shadow-lg border-t-4 border-emerald-400 hidden">
+                <p class="text-slate-600 mb-4">Anda belum melengkapi data identitas.</p>
+                <!-- Updated button to green gradient -->
+                <a href="/identity_form" class="inline-block bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-2 px-6 rounded-lg transition-smooth hover-lift shadow-md">
+                    ➕ Lengkapi Sekarang
                 </a>
             </div>
 
             <!-- Riwayat Hasil Kuesioner -->
-            <h2 class="text-2xl font-bold text-slate-800 mb-6">Riwayat Hasil Kuesioner</h2>
+            <h2 class="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-blue-500 bg-clip-text text-transparent mb-6 mt-10">Riwayat Hasil Kuesioner</h2>
 
             <div id="results-container" class="space-y-6">
                 <!-- Riwayat akan di-render di sini oleh JavaScript -->
             </div>
-            <div id="results-loading" class="text-center p-8 bg-gray-50 rounded-lg shadow-inner">
+            
+            <!-- Enhanced loading state -->
+            <div id="results-loading" class="text-center p-8 bg-white rounded-xl shadow-lg border-t-4 border-emerald-400">
                 <p class="text-slate-600">Memuat riwayat...</p>
             </div>
-            <div id="results-empty" class="text-center p-8 bg-gray-50 rounded-lg shadow-inner hidden" >
-                <p class="text-slate-600">Anda belum memiliki riwayat hasil kuesioner.</p>
-                <a href="/" class="mt-4 inline-block bg-emerald-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-emerald-600 transition duration-150">
-                    Mulai Kuesioner Sekarang
+            
+            <!-- Enhanced empty state with gradient background -->
+            <div id="results-empty" class="text-center p-8 bg-white rounded-xl shadow-lg border-t-4 border-emerald-400 hidden">
+                <p class="text-slate-600 mb-4">Anda belum memiliki riwayat hasil kuesioner.</p>
+                <!-- Updated button to green gradient -->
+                <a href="/" class="inline-block bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-2 px-6 rounded-lg transition-smooth hover-lift shadow-md">
+                    📋 Mulai Kuesioner Sekarang
                 </a>
             </div>
         </main>
     </div>
 
-    <!-- Modal untuk Edit Profil -->
-    <div id="edit-profile-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <header class="p-4 flex justify-between items-center border-b">
-                <h3 class="text-lg font-bold text-slate-800">Edit Profil Identitas</h3>
-                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800">&times;</button>
+    <!-- Enhanced modal with modern styling -->
+    <div id="edit-profile-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border-t-4 border-emerald-400">
+            <!-- Updated header gradient -->
+            <header class="p-6 flex justify-between items-center border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-blue-50">
+                <h3 class="text-lg font-bold bg-gradient-to-r from-emerald-600 to-blue-500 bg-clip-text text-transparent">Edit Profil Identitas</h3>
+                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800 text-2xl transition-smooth">&times;</button>
             </header>
             <div id="modal-content" class="p-8 overflow-y-auto">
                 <!-- Konten dari identity_form.html akan dimuat di sini -->
-                <p class="text-center">Memuat formulir...</p>
+                <p class="text-center text-slate-600">Memuat formulir...</p>
             </div>
         </div>
     </div>
-
 
     <script src="script.js" defer></script>
 </body>

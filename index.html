@@ -12,12 +12,49 @@
         /* Mengatur font dan memastikan layout penuh */
         html, body {
             font-family: 'Poppins', sans-serif;
-            background-color: #f1f5f9; /* slate-100 */
+            background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 50%, #fef3c7 100%);
+            min-height: 100vh;
         }
+        
+        /* Enhanced background with animated decorative elements */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -20%;
+            left: -5%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 8s ease-in-out infinite reverse;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(30px); }
+        }
+        
         /* Style untuk scrollbar yang rapi */
         #chat-output {
             scroll-behavior: smooth;
         }
+        
         /* Custom spinner */
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
@@ -28,60 +65,316 @@
             animation: spin 1s linear infinite;
             margin-right: 8px;
         }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        /* Enhanced sidebar styling with gradient and decorative elements */
+        .sidebar-gradient {
+            background: linear-gradient(180deg, #065f46 0%, #047857 50%, #059669 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .sidebar-gradient::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 5s ease-in-out infinite;
+        }
+        
+        .sidebar-gradient::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: float 7s ease-in-out infinite reverse;
+        }
+        
+        /* Enhanced card design with gradient border */
+        .card-enhanced {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card-enhanced::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #22c55e 0%, #3b82f6 50%, #f97316 100%);
+            z-index: 1;
+        }
+        
+        /* Enhanced nav items with icons and hover effects */
+        .nav-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+        }
+        
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 0 4px 4px 0;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(4px);
+        }
+        
+        .nav-item:hover::before {
+            opacity: 1;
+        }
+        
+        .nav-item.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .nav-item.active::before {
+            opacity: 1;
+        }
+        
+        /* Enhanced user profile card */
+        .user-profile-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 24px;
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(10px);
+        }
+        
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #22c55e 0%, #3b82f6 100%);
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Enhanced header styling */
+        .header-enhanced {
+            background: linear-gradient(90deg, #f8fafc 0%, #f1f5f9 100%);
+            border-bottom: 3px solid;
+            border-image: linear-gradient(90deg, #22c55e 0%, #3b82f6 50%, #f97316 100%) 1;
+        }
+        
+        /* Enhanced button styling */
+        .btn-reset {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-reset:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-start {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+            cursor: pointer;
+        }
+        
+        .btn-start:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-logout {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+            cursor: pointer;
+        }
+        
+        .btn-logout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+        }
+        
+        /* Decorative shapes in main content */
+        .decorative-shape {
+            position: absolute;
+            opacity: 0.05;
+            pointer-events: none;
+        }
+        
+        .shape-circle {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+        
+        .shape-square {
+            width: 150px;
+            height: 150px;
+            background: #3b82f6;
+        }
+        
+        /* Initial screen enhancement */
+        .initial-screen-enhanced {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
+            border-radius: 12px;
+            padding: 32px;
+        }
+        
+        .wellness-quote {
+            background: linear-gradient(135deg, #ecfdf5 0%, #eff6ff 100%);
+            border-left: 4px solid #22c55e;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+            font-style: italic;
+            color: #047857;
+            font-size: 14px;
+        }
+
+        #deco-circle-main {
+            top: 10%;
+            right: 5%;
+        }
+
+        #deco-square-main {
+            bottom: 15%;
+            left: 5%;
+            transform: rotate(45deg);
+        }
     </style>
 </head>
-<body class="bg-slate-100">
+<body>
 
-    <div class="flex h-screen">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-emerald-800 text-white flex flex-col p-4">
-            <div class="text-center mb-10">
-                <div class="w-24 h-24 rounded-full bg-emerald-600 mx-auto flex items-center justify-center text-4xl font-bold mb-2 border-4 border-emerald-500">
+    <div class="relative min-h-screen md:flex">
+        <!-- Enhanced Sidebar with gradient and decorative elements -->
+        <aside id="sidebar" class="w-64 sidebar-gradient text-white flex-col p-6 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 md:flex transition-transform duration-300 ease-in-out z-30">
+            <!-- User profile card with enhanced styling -->
+            <div class="user-profile-card">
+                <div class="user-avatar">
                     <span id="user-initial"></span>
                 </div>
-                <h2 id="user-username" class="text-xl font-semibold"></h2>
+                <h2 id="user-username" class="text-lg font-semibold text-white"></h2>
+                <p class="text-sm text-emerald-100 mt-1">Kesejahteraan Anda adalah prioritas kami</p>
             </div>
+            
+            <!-- Enhanced navigation with icons and visual indicators -->
             <nav class="flex-grow">
-            <a href="/profile" class="block py-3 px-4 rounded-lg hover:bg-emerald-700 transition duration-150 mb-2">
-
-                    Profil & Riwayat
+                <a href="/profile" class="nav-item hover:bg-emerald-700 transition duration-150">
+                    <span class="text-xl">👤</span>
+                    <span>Profil & Riwayat</span>
                 </a>
-                <a href="/" class="block py-3 px-4 rounded-lg bg-emerald-700 font-bold transition duration-150">
-                    Kuesioner
+                <a href="/" class="nav-item active bg-emerald-700 font-bold transition duration-150">
+                    <span class="text-xl">📋</span>
+                    <span>Kuesioner</span>
                 </a>
             </nav>
+            
+            <!-- Enhanced logout button -->
             <div class="mt-auto">
-                <button id="logout-button" class="block w-full text-center py-3 px-4 rounded bg-red-600 hover:bg-red-700 transition duration-150">
-                    Keluar
+                <button id="logout-button" class="btn-logout">
+                    🚪 Keluar
                 </button>
             </div>
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col p-4">
-            <div id="app-container" class="bg-white rounded-xl shadow-lg w-full max-w-3xl mx-auto flex flex-col flex-grow overflow-hidden">
-                <header class="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center gap-4 rounded-t-xl">
-                    <h1 class="text-xl font-bold text-emerald-800">Asisten Kesejahteraan Diri</h1>
-                    <a href="#" id="reset-button" class="text-sm bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded-full transition duration-150 flex items-center no-underline">
-                        Ulang Kuesioner
+        <main class="flex-1 flex flex-col p-4 sm:p-6 relative z-10">
+            <!-- Enhanced app container with gradient border -->
+            <div id="app-container" class="card-enhanced w-full max-w-3xl mx-auto flex flex-col flex-grow overflow-hidden">
+                <!-- Enhanced header with gradient border -->
+                <header class="header-enhanced p-6 flex justify-between items-center gap-4">
+                    <!-- Hamburger Menu Button for Mobile -->
+                    <button id="menu-button" aria-label="Buka menu" class="md:hidden text-slate-600 hover:text-slate-800" title="Buka menu">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                    </button>
+
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">Asisten Kesejahteraan Diri</h1>
+                        <p class="text-sm text-slate-500 mt-1">Dukungan untuk kesehatan mental Anda</p>
+                    </div>
+                    <a href="#" id="reset-button" class="btn-reset no-underline text-center">
+                        ↻ Ulang Kuesioner
                     </a>
                 </header>
-                <div id="chat-container" class="flex-grow overflow-y-auto p-4 space-y-4">
-                    <div id="initial-screen" class="text-center p-8 flex flex-col justify-center h-full">
-                        <h2 class="text-2xl font-semibold mb-4 text-emerald-800">Selamat Datang!</h2>
-                        <p class="text-slate-600 mb-6 max-w-md mx-auto">Untuk memberikan arahan terbaik, kami akan memulai dengan kuesioner singkat untuk memahami kondisi kesejahteraan Anda.</p>
-                        <button id="start-who5" class="bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-emerald-600 transition duration-150 self-center">
-                            Mulai Kuesioner
+                
+                <div id="chat-container" class="flex-grow overflow-y-auto p-6 space-y-4 relative">
+                    <!-- Decorative shapes in background -->
+                    <div id="deco-circle-main" class="decorative-shape shape-circle"></div>
+                    <div id="deco-square-main" class="decorative-shape shape-square"></div>
+                    
+                    <div id="initial-screen" class="initial-screen-enhanced text-center p-8 flex flex-col justify-center h-full relative z-10">
+                        <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">Selamat Datang!</h2>
+                        <p class="text-slate-600 mb-6 max-w-md mx-auto leading-relaxed">Untuk memberikan arahan terbaik, kami akan memulai dengan kuesioner singkat untuk memahami kondisi kesejahteraan Anda.</p>
+                        <button id="start-who5" class="btn-start self-center">
+                            ✨ Mulai Kuesioner
                         </button>
+                        <div class="wellness-quote">
+                            "Kesehatan mental yang baik adalah fondasi dari kehidupan yang bermakna dan bahagia."
+                        </div>
                     </div>
                     <div id="chat-output" class="hidden h-full overflow-y-auto space-y-4"></div>
                 </div>
+                
                 <p id="status-message" class="text-sm text-gray-500 p-2 text-center hidden bg-gray-100"></p>
-                <footer id="quiz-footer" class="p-4 bg-gray-100 rounded-b-xl shadow-inner flex justify-center flex-wrap"></footer>
+                <footer id="quiz-footer" class="p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-b-2xl shadow-inner flex justify-center flex-wrap gap-2"></footer>
             </div>
         </main>
     </div>
