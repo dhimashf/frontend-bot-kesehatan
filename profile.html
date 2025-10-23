@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil Pengguna - Asisten Kesejahteraan Diri</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-emerald-800 text-white flex flex-col p-4">
+            <div class="text-center mb-10">
+                <div class="w-24 h-24 rounded-full bg-emerald-600 mx-auto flex items-center justify-center text-4xl font-bold mb-2 border-4 border-emerald-500">
+                    <span id="user-initial"></span>
+                </div>
+                <h2 id="user-username" class="text-xl font-semibold"></h2>
+            </div>
+            <nav class="flex-grow">
+                <a href="/profile" class="block py-3 px-4 rounded-lg bg-emerald-700 font-bold transition duration-150 mb-2">
+                    Profil & Riwayat
+                </a>
+                <a href="/" class="block py-3 px-4 rounded-lg hover:bg-emerald-700 transition duration-150">
+                    Kuesioner
+                </a>
+            </nav>
+            <div class="mt-auto">
+                <button id="logout-button" class="block w-full text-center py-3 px-4 rounded-lg bg-red-600 hover:bg-red-700 transition duration-150">
+                    Keluar
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6 lg:p-10 overflow-y-auto">
+            <h1 class="text-3xl font-bold text-slate-800 mb-8">Profil & Riwayat</h1>
+
+            <!-- Data Identitas Pengguna -->
+            <div id="profile-loading" class="text-center p-8 bg-gray-50 rounded-lg shadow-inner">
+                <p class="text-slate-600">Memuat data profil...</p>
+            </div>
+            <div id="profile-container" class="bg-white p-6 rounded-xl shadow-lg mb-8 border-t-4 border-emerald-500 hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-emerald-800">Data Identitas</h2>
+                    <button id="edit-profile-btn" class="text-sm bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded-lg transition duration-150">Edit Profil</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 text-sm text-slate-700">
+                    <div><strong class="font-medium text-slate-500 block">Email:</strong> <span id="profile-email"></span></div>
+                    <div><strong class="font-medium text-slate-500 block">Inisial:</strong> <span id="profile-inisial"></span></div>
+                    <div><strong class="font-medium text-slate-500 block">No Kontak:</strong> <span id="profile-no_wa"></span></div>
+                    <div><strong class="font-medium text-slate-500 block">Usia:</strong> <span id="profile-usia"></span></div>
+                    <div><strong class="font-medium text-slate-500 block">Jenis Kelamin:</strong> <span id="profile-jenis_kelamin"></span></div>
+                    <div><strong class="font-medium text-slate-500 block">Pendidikan:</strong> <span id="profile-pendidikan"></span></div>
+                    <div><strong class="font-medium text-slate-500 block">Lama Bekerja:</strong> <span id="profile-lama_bekerja"></span></div>
+                    <div><strong class="font-medium text-slate-500 block">Status Pegawai:</strong> <span id="profile-status_pegawai"></span></div>
+                    <div><strong class="font-medium text-slate-500 block">Jabatan:</strong> <span id="profile-jabatan"></span></div>
+                    <div><strong class="font-medium text-slate-500 block">Unit/Ruangan:</strong> <span id="profile-unit_ruangan"></span></div>
+                    <div><strong class="font-medium text-slate-500 block">Status Perkawinan:</strong> <span id="profile-status_perkawinan"></span></div>
+                    <div><strong class="font-medium text-slate-500 block">Status Kehamilan:</strong> <span id="profile-status_kehamilan"></span></div>
+                    <div><strong class="font-medium text-slate-500 block">Jumlah Anak:</strong> <span id="profile-jumlah_anak"></span></div>
+                </div>
+            </div>
+            <div id="profile-empty" class="text-center p-8 bg-gray-50 rounded-lg shadow-inner hidden">
+                <p class="text-slate-600">Anda belum melengkapi data identitas.</p>
+                <a href="/identity_form" class="mt-4 inline-block bg-emerald-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-emerald-600 transition duration-150">
+                    Lengkapi Sekarang
+                </a>
+            </div>
+
+            <!-- Riwayat Hasil Kuesioner -->
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">Riwayat Hasil Kuesioner</h2>
+
+            <div id="results-container" class="space-y-6">
+                <!-- Riwayat akan di-render di sini oleh JavaScript -->
+            </div>
+            <div id="results-loading" class="text-center p-8 bg-gray-50 rounded-lg shadow-inner">
+                <p class="text-slate-600">Memuat riwayat...</p>
+            </div>
+            <div id="results-empty" class="text-center p-8 bg-gray-50 rounded-lg shadow-inner hidden" >
+                <p class="text-slate-600">Anda belum memiliki riwayat hasil kuesioner.</p>
+                <a href="/" class="mt-4 inline-block bg-emerald-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-emerald-600 transition duration-150">
+                    Mulai Kuesioner Sekarang
+                </a>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal untuk Edit Profil -->
+    <div id="edit-profile-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <header class="p-4 flex justify-between items-center border-b">
+                <h3 class="text-lg font-bold text-slate-800">Edit Profil Identitas</h3>
+                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800">&times;</button>
+            </header>
+            <div id="modal-content" class="p-8 overflow-y-auto">
+                <!-- Konten dari identity_form.html akan dimuat di sini -->
+                <p class="text-center">Memuat formulir...</p>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="script.js" defer></script>
+</body>
+</html>
