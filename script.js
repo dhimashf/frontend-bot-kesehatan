@@ -92,12 +92,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     localStorage.setItem('token', data.access_token);
                     window.location.href = '/';
                 } else {
-                    const error = await response.json();
-                    errorMessage.textContent = error.detail;
+                    let errorMsg = 'Login failed. Please check your credentials.';
+                    try {
+                        // Coba parse error dari backend, jika ada
+                        const errorData = await response.json();
+                        errorMsg = errorData.detail || errorMsg;
+                    } catch (e) {
+                        // Jika response bukan JSON, tampilkan pesan umum
+                        console.error("Could not parse error response:", e);
+                    }
+                    errorMessage.textContent = errorMsg;
                     errorMessage.classList.remove('hidden');
                 }
             } catch (error) {
-                errorMessage.textContent = 'An unexpected error occurred.';
+                errorMessage.textContent = 'An unexpected network error occurred. Please try again.';
                 errorMessage.classList.remove('hidden');
             }
         });
