@@ -685,12 +685,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addMessageToChat(sender, text) {
         const messageDiv = document.createElement('div');
-        messageDiv.className = `p-3 rounded-lg max-w-lg ${sender === 'user' ? 'bg-emerald-500 text-white self-end' : 'bg-slate-200 text-slate-800 self-start'}`;
-        messageDiv.innerHTML = text; // Menggunakan innerHTML untuk render <br>
+        // Pastikan chat container memiliki tinggi yang tepat
+        chatOutput.style.maxHeight = '400px'; // Atur sesuai kebutuhan
+        chatOutput.style.overflowY = 'auto';
+        messageDiv.className = `p-3 rounded-lg max-w-lg ${sender === 'user' ? 'bg-emerald-500 text-white self-end ml-auto' : 'bg-slate-200 text-slate-800 self-start'}`;
+        messageDiv.innerHTML = text;
         
         if (chatOutput) {
             chatOutput.appendChild(messageDiv);
-            chatOutput.scrollTop = chatOutput.scrollHeight;
+            
+            // Scroll otomatis ke bawah dengan behavior smooth
+            chatOutput.scrollTo({
+                top: chatOutput.scrollHeight,
+                behavior: 'smooth'
+            });
         }
     }
 });
