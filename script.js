@@ -35,10 +35,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bagian ini dinonaktifkan agar bisa melihat halaman internal tanpa login.
     // Aktifkan kembali untuk mode produksi.
     if (!isAuthPage) { // Jika ini BUKAN halaman login/register, maka ini adalah halaman yang dilindungi
-        // if (!token) {
-        //     window.location.href = '/login';
-        //     return; // Hentikan eksekusi jika tidak ada token
-        // }
+        if (!token) {
+            window.location.href = '/login';
+            return; // Hentikan eksekusi jika tidak ada token
+        }
         fetchUserProfile();
     }
 
@@ -342,70 +342,174 @@ document.addEventListener('DOMContentLoaded', () => {
                 profileEmpty.classList.remove('hidden');
             }
 
-            // Render Riwayat Hasil Kuesioner
-            if (data.health_results_completed && data.health_results && data.health_results.length > 0) {
-                resultsContainer.classList.remove('hidden');
-                resultsEmpty.classList.add('hidden');
+// Render Riwayat Hasil Kuesioner
+        if (data.health_results_completed && data.health_results && data.health_results.length > 0) {
+            resultsContainer.classList.remove('hidden');
+            resultsEmpty.classList.add('hidden');
 
-                let allResultCards = '';
-                data.health_results.forEach(result => {
-                    const date = new Date(result.created_at).toLocaleString('id-ID', { 
-                        day: 'numeric', 
-                        month: 'long', 
-                        year: 'numeric',
-                        hour: '2-digit', minute: '2-digit', second: '2-digit'
-                    });
-                    const cardId = `result-card-${result.id}`;
-                    allResultCards += `
-                        <div id="${cardId}" class="bg-white p-6 rounded-lg shadow-md border-l-4 border-emerald-500 space-y-3">
-                            <div class="flex justify-between items-start">
-                                <p class="text-sm font-semibold text-slate-600">Tanggal Pengisian: ${date}</p>
-                                <button data-result-id="${result.id}" class="delete-result-btn text-red-500 hover:text-red-700 text-xs font-bold">HAPUS</button>
+            let allResultCards = '';
+            data.health_results.forEach(result => {
+                const d = new Date(result.created_at);
+                const datePart = d.toLocaleDateString('id-ID', {
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric'
+                });
+                // Mengganti format waktu dari HH.mm.ss menjadi HH:mm:ss
+                const timePart = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\./g, ':');
+                const date = `${datePart}, ${timePart}`;
+                const cardId = `result-card-${result.id}`;
+                
+                allResultCards += `
+                    <div id="${cardId}" class="bg-white p-6 rounded-lg shadow-md border-l-4 border-emerald-500 mb-6">
+                        <!-- Header Kartu -->
+                        <div class="flex justify-between items-start mb-6 pb-4 border-b border-slate-200">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-600 mb-1">Tanggal Pengisian</p>
+                                <p class="text-lg font-bold text-slate-800">${date}</p>
                             </div>
-                            <div class="space-y-4 text-sm">
-                                <div>
-                                    <p class="font-bold text-slate-700">WHO-5 WELL-BEING INDEX</p>
-                                    <p>Skor: ${result.who5_total} dari 30</p>
-                                    <p>Kategori: <span class="font-semibold">${result.who5_category}</span></p>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-slate-700">GAD-7 (Generalized Anxiety Disorder)</p>
-                                    <p>Skor: ${result.gad7_total} dari 21</p>
-                                    <p>Kategori: <span class="font-semibold">${result.gad7_category}</span></p>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-slate-700">Maslach Burnout Inventory (MBI)</p>
-                                    <p>Kelelahan Emosional: ${result.mbi_emosional_total} (<span class="font-semibold">${result.mbi_emosional_category}</span>)</p>
-                                    <p>Sikap Sinis: ${result.mbi_sinis_total} (<span class="font-semibold">${result.mbi_sinis_category}</span>)</p>
-                                    <p>Pencapaian Pribadi: ${result.mbi_pencapaian_total} (<span class="font-semibold">${result.mbi_pencapaian_category}</span>)</p>
-                                    <p>Total Skor: ${result.mbi_total} (N/A)</p>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-slate-700">NAQ-R (Negative Acts Questionnaire-Revised)</p>
-                                    <p>Perundungan Pribadi: ${result.naqr_pribadi_total}</p>
-                                    <p>Perundungan Pekerjaan: ${result.naqr_pekerjaan_total}</p>
-                                    <p>Intimidasi: ${result.naqr_intimidasi_total}</p>
-                                    <p>Total Skor: ${result.naqr_total}</p>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-slate-700">Kessler (K10) Skala Gangguan Psikososial</p>
-                                    <p>Skor: ${result.k10_total} dari 50</p>
-                                    <p>Kategori: <span class="font-semibold">${result.k10_category}</span></p>
-                                </div>
-                            </div>
+                            <button data-result-id="${result.id}" class="delete-result-btn px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors duration-200">
+                                HAPUS
+                            </button>
                         </div>
-                    `;
-                });
-                resultsContainer.innerHTML = allResultCards;
 
-                // Tambahkan event listener untuk semua tombol hapus
-                document.querySelectorAll('.delete-result-btn').forEach(button => {
-                    button.addEventListener('click', handleDeleteResult);
-                });
-            } else {
-                resultsContainer.classList.add('hidden');
-                resultsEmpty.classList.remove('hidden');
-            }
+                        <!-- Grid Layout untuk Semua Tes -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            
+                            <!-- WHO-5 WELL-BEING INDEX -->
+                            <div class="bg-gradient-to-br from-emerald-50 to-green-50 p-4 rounded-lg border border-emerald-200">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                                    <p class="font-bold text-slate-700 text-sm">WELL-BEING INDEX</p>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium text-slate-600">Skor:</span>
+                                        <span class="font-bold text-emerald-700">${result.who5_total}/30</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium text-slate-600">Kategori:</span>
+                                        <span class="font-semibold text-emerald-600 px-2 py-1 bg-emerald-100 rounded-full text-xs">${result.who5_category}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- GAD-7 -->
+                            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-lg border border-blue-200">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                    <p class="font-bold text-slate-700 text-sm">GAD-7 (ANXIETY)</p>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium text-slate-600">Skor:</span>
+                                        <span class="font-bold text-blue-700">${result.gad7_total}/21</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium text-slate-600">Kategori:</span>
+                                        <span class="font-semibold text-blue-600 px-2 py-1 bg-blue-100 rounded-full text-xs">${result.gad7_category}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Kessler (K10) -->
+                            <div class="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-lg border border-purple-200">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
+                                    <p class="font-bold text-slate-700 text-sm">KESSLER (K10)</p>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium text-slate-600">Skor:</span>
+                                        <span class="font-bold text-purple-700">${result.k10_total}/50</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-medium text-slate-600">Kategori:</span>
+                                        <span class="font-semibold text-purple-600 px-2 py-1 bg-purple-100 rounded-full text-xs">${result.k10_category}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Maslach Burnout Inventory -->
+                            <div class="bg-gradient-to-br from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-200 md:col-span-2 lg:col-span-3">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <div class="w-3 h-3 bg-orange-500 rounded-full"></div>
+                                    <p class="font-bold text-slate-700 text-sm">MASLACH BURNOUT INVENTORY</p>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                    <div class="text-center">
+                                        <p class="font-medium text-slate-600 mb-2">Kelelahan Emosional</p>
+                                        <div class="bg-white p-3 rounded-lg border border-orange-200">
+                                            <p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_emosional_total}</p>
+                                            <span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${result.mbi_emosional_category}</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="font-medium text-slate-600 mb-2">Sikap Sinis</p>
+                                        <div class="bg-white p-3 rounded-lg border border-orange-200">
+                                            <p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_sinis_total}</p>
+                                            <span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${result.mbi_sinis_category}</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="font-medium text-slate-600 mb-2">Pencapaian Pribadi</p>
+                                        <div class="bg-white p-3 rounded-lg border border-orange-200">
+                                            <p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_pencapaian_total}</p>
+                                            <span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${result.mbi_pencapaian_category}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-4 pt-3 border-t border-orange-200 text-center">
+                                    <p class="font-medium text-slate-600">Total Skor: <span class="font-bold text-orange-700 text-lg">${result.mbi_total}</span></p>
+                                </div>
+                            </div>
+
+                            <!-- NAQ-R -->
+                            <div class="bg-gradient-to-br from-red-50 to-rose-50 p-4 rounded-lg border border-red-200 md:col-span-2 lg:col-span-3">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                    <p class="font-bold text-slate-700 text-sm">NAQ-R (PERUNDUNGAN)</p>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                    <div class="text-center">
+                                        <p class="font-medium text-slate-600 mb-2">Perundungan Pribadi</p>
+                                        <div class="bg-white p-3 rounded-lg border border-red-200">
+                                            <p class="text-2xl font-bold text-red-600">${result.naqr_pribadi_total}</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="font-medium text-slate-600 mb-2">Perundungan Pekerjaan</p>
+                                        <div class="bg-white p-3 rounded-lg border border-red-200">
+                                            <p class="text-2xl font-bold text-red-600">${result.naqr_pekerjaan_total}</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-center">
+                                        <p class="font-medium text-slate-600 mb-2">Intimidasi</p>
+                                        <div class="bg-white p-3 rounded-lg border border-red-200">
+                                            <p class="text-2xl font-bold text-red-600">${result.naqr_intimidasi_total}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-4 pt-3 border-t border-red-200 text-center">
+                                    <p class="font-medium text-slate-600">Total Skor: <span class="font-bold text-red-700 text-lg">${result.naqr_total}</span></p>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                `;
+            });
+            
+            resultsContainer.innerHTML = allResultCards;
+
+            // Tambahkan event listener untuk semua tombol hapus
+            document.querySelectorAll('.delete-result-btn').forEach(button => {
+                button.addEventListener('click', handleDeleteResult);
+            });
+        } else {
+            resultsContainer.classList.add('hidden');
+            resultsEmpty.classList.remove('hidden');
+        }
 
         } catch (error) {
             console.error('Error rendering profile page:', error);
@@ -416,8 +520,8 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsEmpty.classList.remove('hidden');
             resultsEmpty.firstElementChild.textContent = 'Gagal memuat riwayat.';
         }
-    }
 
+    }
     async function openEditModal(profileData) {
         const modal = document.getElementById('edit-profile-modal');
         const modalContent = document.getElementById('modal-content');
