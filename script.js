@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('password', password);
 
             try {
-                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                const response = await fetch(`${API_BASE_URL}/web-auth/login`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
@@ -121,19 +121,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const errorMessage = document.getElementById('error-message');
 
             try {
-                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                const response = await fetch(`${API_BASE_URL}/web-auth/register`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ email, password }),
+                    // Backend untuk register mengharapkan JSON
+                    body: JSON.stringify({ email: email, password: password }),
                 });
 
                 if (response.ok) {
+                    alert('Registrasi berhasil! Silakan masuk dengan akun Anda.');
                     window.location.href = '/login';
                 } else {
                     const error = await response.json();
-                    errorMessage.textContent = error.detail;
+                    // Handle potential array of errors from validation
+                    const errorDetail = Array.isArray(error.detail) ? error.detail.map(d => d.msg).join(', ') : error.detail;
+                    errorMessage.textContent = errorDetail || 'Registrasi gagal. Silakan coba lagi.';
                     errorMessage.classList.remove('hidden');
                 }
             } catch (error) {
@@ -355,8 +359,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     month: 'long', 
                     year: 'numeric'
                 });
-                // Mengganti format waktu dari HH.mm.ss menjadi HH:mm:ss
-                const timePart = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(/\./g, ':');
+                // Format waktu secara manual untuk konsistensi HH:mm:ss
+                const timePart = [d.getHours(), d.getMinutes(), d.getSeconds()].map(num => String(num).padStart(2, '0')).join(':');
                 const date = `${datePart}, ${timePart}`;
                 const cardId = `result-card-${result.id}`;
                 
@@ -559,6 +563,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 emailInput.classList.add('bg-slate-100');
             }
 
+            // Ubah teks tombol submit menjadi "Simpan"
+            const submitButton = formElement.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.textContent = 'Simpan';
+            }
+
             // Tambahkan event listener untuk submit form di dalam modal
             formElement.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -715,7 +725,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function advanceQuestionnaire() {
-        const sequence = ['who5', 'gad7', 'mbi', 'naqr', 'k10'];
+        const sequence = ['who5', 'gad7', 'k10', 'mbi', 'naqr'];
         const currentIndex = sequence.indexOf(questionnaireState.current);
 
         if (currentIndex < sequence.length - 1) {
@@ -746,7 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
             who5_total: questionnaireState.scores.who5.reduce((a, b) => a + b, 0),
             gad7_total: questionnaireState.scores.gad7.reduce((a, b) => a + b, 0),
             // Skor MBI masih dikirim sebagai array karena sub-skalanya lebih kompleks
-            mbi_scores: questionnaireState.scores.mbi,
+            mbi_scores: questionnaireState.scores.mbi || [],
             // Skor NAQR sudah dipecah menjadi sub-skala
             naqr_pribadi_total: calculateSubscale(naqr_pribadi_indices),
             naqr_pekerjaan_total: calculateSubscale(naqr_pekerjaan_indices),
