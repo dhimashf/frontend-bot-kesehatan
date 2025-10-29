@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Mengatur base URL API secara dinamis.
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const API_BASE_URL = isLocalhost ? 'http://localhost:8000/api/v1' : '/api/v1';
+    const API_BASE_URL = isLocalhost ? 'http://localhost:8010/api/v1' : '/api/v1';
     const token = localStorage.getItem('token');
 
     // Token check for protected pages

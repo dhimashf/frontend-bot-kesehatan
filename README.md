@@ -50,7 +50,7 @@ Untuk menjalankan frontend ini di komputer Anda, ikuti langkah-langkah berikut.
 
 ### Prasyarat
 
-1.  **Backend Server**: Pastikan server backend API Anda sudah berjalan. Secara default, frontend ini akan mencoba terhubung ke `http://localhost:8000`.
+1.  **Backend Server**: Pastikan server backend API Anda sudah berjalan. Secara default, frontend ini akan mencoba terhubung ke `http://localhost:8010`.
 2.  **Web Server Lokal**: Anda memerlukan web server sederhana untuk menyajikan file-file statis ini.
 
 ### Langkah-langkah
@@ -78,7 +78,7 @@ Untuk menjalankan frontend ini di komputer Anda, ikuti langkah-langkah berikut.
 
 3.  **Buka Aplikasi**: Buka browser Anda dan akses `http://localhost:3000`.
 
-    Aplikasi sekarang akan berjalan dan berkomunikasi dengan backend Anda di `http://localhost:8000`.
+    Aplikasi sekarang akan berjalan dan berkomunikasi dengan backend Anda di `http://localhost:8010`.
 
 ## 🌐 Deployment ke Vercel
 
