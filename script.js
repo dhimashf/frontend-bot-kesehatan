@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button data-user-id="${user.id}" class="user-card-btn text-left block bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-t-4 border-emerald-400 hover-lift">
                                 <div class="flex items-center space-x-4">
                                     <div class="flex-shrink-0 w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white text-xl font-bold">${initial}</div>
-                                    <div>
+                                    <div class="min-w-0">
                                         <p class="text-base font-bold text-slate-800 truncate" title="${user.email}">${user.email}</p>
                                         <p class="text-sm text-slate-500">ID: ${user.id}</p>
                                         <p class="text-xs text-slate-400 mt-1">Peran: <span class="font-semibold">${user.role}</span></p>
@@ -468,6 +468,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Event listener untuk perubahan hash dan pemuatan awal
         window.addEventListener('hashchange', loadContent);
         loadContent(); // Muat konten saat halaman pertama kali dibuka
+
+        // Event listener untuk tombol unduh semua hasil
+        const downloadAllBtn = document.getElementById('download-all-csv-btn');
+        if (downloadAllBtn) {
+            downloadAllBtn.addEventListener('click', downloadAllResultsAsCSV);
+        }
     }
 
     // --- Fungsi untuk Modal Detail Pengguna di Halaman Admin ---
@@ -476,6 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const modalContentArea = document.getElementById('modal-content-area');
         const modalUserEmail = document.getElementById('modal-user-email');
         const closeModalBtn = document.getElementById('close-modal-btn');
+        const downloadCsvBtn = document.getElementById('download-csv-btn');
 
         // Tampilkan modal dan status loading
         modal.classList.remove('hidden');
@@ -483,7 +490,10 @@ document.addEventListener('DOMContentLoaded', () => {
         modalContentArea.innerHTML = `<div class="text-center p-8"><p class="text-slate-600">Memuat detail pengguna...</p></div>`;
 
         // Fungsi untuk menutup modal
-        const closeModal = () => modal.classList.add('hidden');
+        const closeModal = () => {
+            modal.classList.add('hidden');
+            downloadCsvBtn.classList.add('hidden'); // Sembunyikan tombol saat modal ditutup
+        };
         closeModalBtn.onclick = closeModal;
         modal.onclick = (event) => {
             if (event.target === modal) {
@@ -523,10 +533,180 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Render konten ke dalam modal
             renderUserDetailModal(combinedData);
+            
+            // Tampilkan tombol unduh jika ada riwayat hasil
+            if (combinedData.health_results_completed) {
+                downloadCsvBtn.classList.remove('hidden');
+                // Hapus listener lama untuk menghindari duplikasi
+                downloadCsvBtn.replaceWith(downloadCsvBtn.cloneNode(true));
+                document.getElementById('download-csv-btn').addEventListener('click', () => {
+                    downloadResultsAsCSV(combinedData);
+                });
+            }
 
         } catch (error) {
             console.error('Error fetching user detail:', error);
             modalContentArea.innerHTML = `<div class="text-center p-8"><p class="text-red-600">Gagal memuat detail pengguna. Silakan coba lagi.</p></div>`;
+        }
+    }
+
+    // --- Fungsi untuk Mengunduh SEMUA Hasil sebagai CSV ---
+    async function downloadAllResultsAsCSV() {
+        const downloadBtn = document.getElementById('download-all-csv-btn');
+        const originalText = downloadBtn.innerHTML;
+        downloadBtn.disabled = true;
+        downloadBtn.innerHTML = `<div class="spinner !w-5 !h-5 !border-t-white"></div><span>Memproses...</span>`;
+
+        try {
+            // Panggil endpoint baru yang efisien untuk mendapatkan semua data sekaligus
+            const response = await fetch(`${API_BASE_URL}/users/admin/all-results-with-biodata`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Gagal mengambil data: ${response.statusText}`);
+            }
+
+            const allResultsData = await response.json();
+
+            if (!allResultsData || allResultsData.length === 0) {
+                alert('Tidak ada data hasil kuesioner dari pengguna manapun untuk diunduh.');
+                return;
+            }
+
+            // Header untuk CSV (sama seperti unduhan per pengguna)
+            const headers = [
+                'User ID', 'Email', 'Inisial', 'Usia', 'Jenis Kelamin', 'Pendidikan', 'Lama Bekerja (Tahun)', 'Status Pegawai', 'Jabatan', 'Unit/Ruangan', 'Status Perkawinan', 'Status Kehamilan', 'Jumlah Anak',
+                'ID Hasil', 'Tanggal Pengisian',
+                'WHO-5 Skor', 'WHO-5 Kategori', 'GAD-7 Skor', 'GAD-7 Kategori', 'K10 Skor', 'K10 Kategori',
+                'MBI Kelelahan Emosional Skor', 'MBI Kelelahan Emosional Kategori', 'MBI Sikap Sinis Skor', 'MBI Sikap Sinis Kategori', 'MBI Pencapaian Pribadi Skor', 'MBI Pencapaian Pribadi Kategori', 'MBI Total Skor', 'MBI Total Kategori',
+                'NAQ-R Perundungan Pribadi Skor', 'NAQ-R Perundungan Pekerjaan Skor', 'NAQ-R Intimidasi Skor', 'NAQ-R Total Skor', 'NAQ-R Kategori'
+            ];
+
+            let csvContent = headers.join(',') + '\r\n';
+            const sanitize = (value) => (value === null || value === undefined) ? '' : (String(value).includes(',') ? `"${value}"` : String(value));
+
+            // Perbaikan: Loop melalui setiap PENGGUNA dalam data yang diterima
+            allResultsData.forEach(user => {
+                const biodata = user.biodata || {};
+
+                // Periksa apakah pengguna ini memiliki riwayat hasil (health_results adalah array)
+                if (user.health_results && user.health_results.length > 0) {
+                    // Loop kedua: Iterasi melalui setiap HASIL KUESIONER dari pengguna ini
+                    user.health_results.forEach(result => {
+                        const d = new Date(result.created_at);
+                        const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                        const mbiTotalScore = result.mbi_emosional_total + result.mbi_sinis_total + result.mbi_pencapaian_total;
+                        const naqrTotalScore = result.naqr_pribadi_total + result.naqr_pekerjaan_total + result.naqr_intimidasi_total;
+
+                        const row = [
+                            biodata.user_id, biodata.email, biodata.inisial, biodata.usia, biodata.jenis_kelamin, biodata.pendidikan, biodata.lama_bekerja, biodata.status_pegawai, biodata.jabatan_lain || biodata.jabatan, biodata.unit_ruangan, biodata.status_perkawinan, biodata.status_kehamilan, biodata.jumlah_anak,
+                            result.id, date,
+                            result.who5_total, getWho5Category(result.who5_total), result.gad7_total, getGad7Category(result.gad7_total), result.k10_total, getK10Category(result.k10_total),
+                            result.mbi_emosional_total, getMbiSubscaleCategory(result.mbi_emosional_total, 'emosional'), result.mbi_sinis_total, getMbiSubscaleCategory(result.mbi_sinis_total, 'sinis'), result.mbi_pencapaian_total, getMbiSubscaleCategory(result.mbi_pencapaian_total, 'pencapaian'), mbiTotalScore, getMbiTotalCategory(mbiTotalScore),
+                            result.naqr_pribadi_total, result.naqr_pekerjaan_total, result.naqr_intimidasi_total, naqrTotalScore, getNaqrCategory(naqrTotalScore)
+                        ].map(sanitize);
+                        csvContent += row.join(',') + '\r\n';
+                    });
+                }
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().slice(0, 10);
+            link.setAttribute('href', url); // Pastikan URL di-set sebelum atribut lain
+            link.setAttribute('download', `semua_hasil_kuesioner_${timestamp}.csv`); // Nama file unduhan
+            document.body.appendChild(link); // Tambahkan link ke body untuk memastikan bisa diklik
+            link.click(); // Picu unduhan
+            document.body.removeChild(link); // Hapus link setelah selesai
+            URL.revokeObjectURL(url); // Bersihkan memori
+
+        } catch (error) {
+            console.error('Error downloading all results:', error);
+            alert('Gagal mengunduh data. Silakan periksa konsol untuk detailnya.');
+        } finally {
+            downloadBtn.disabled = false;
+            downloadBtn.innerHTML = originalText;
+        }
+    }
+
+    // --- Fungsi untuk Mengunduh Hasil sebagai CSV ---
+    function downloadResultsAsCSV(userData) {
+        if (!userData.health_results || userData.health_results.length === 0) {
+            alert('Tidak ada data hasil kuesioner untuk diunduh.');
+            return;
+        }
+
+        const biodata = userData.biodata || {};
+        const results = userData.health_results;
+
+        // Header untuk CSV
+        const headers = [
+            'User ID', 'Email', 'Inisial', 'Usia', 'Jenis Kelamin', 'Pendidikan', 'Lama Bekerja (Tahun)', 'Status Pegawai', 'Jabatan', 'Unit/Ruangan', 'Status Perkawinan', 'Status Kehamilan', 'Jumlah Anak',
+            'ID Hasil', 'Tanggal Pengisian',
+            'WHO-5 Skor', 'WHO-5 Kategori',
+            'GAD-7 Skor', 'GAD-7 Kategori',
+            'K10 Skor', 'K10 Kategori',
+            'MBI Kelelahan Emosional Skor', 'MBI Kelelahan Emosional Kategori',
+            'MBI Sikap Sinis Skor', 'MBI Sikap Sinis Kategori',
+            'MBI Pencapaian Pribadi Skor', 'MBI Pencapaian Pribadi Kategori',
+            'MBI Total Skor', 'MBI Total Kategori',
+            'NAQ-R Perundungan Pribadi Skor', 'NAQ-R Perundungan Pekerjaan Skor', 'NAQ-R Intimidasi Skor',
+            'NAQ-R Total Skor', 'NAQ-R Kategori'
+        ];
+
+        let csvContent = headers.join(',') + '\r\n';
+
+        // Fungsi untuk membersihkan data untuk CSV (menghindari koma)
+        const sanitize = (value) => {
+            if (value === null || value === undefined) return '';
+            const str = String(value);
+            // Jika string mengandung koma, bungkus dengan tanda kutip ganda
+            if (str.includes(',')) return `"${str}"`;
+            return str;
+        };
+
+        results.forEach(result => {
+            const d = new Date(result.created_at);
+            const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+            const mbiTotalScore = result.mbi_emosional_total + result.mbi_sinis_total + result.mbi_pencapaian_total;
+            const naqrTotalScore = result.naqr_pribadi_total + result.naqr_pekerjaan_total + result.naqr_intimidasi_total;
+
+            const row = [
+                biodata.user_id, biodata.email, biodata.inisial, biodata.usia, biodata.jenis_kelamin, biodata.pendidikan, biodata.lama_bekerja, biodata.status_pegawai, biodata.jabatan_lain || biodata.jabatan, biodata.unit_ruangan, biodata.status_perkawinan, biodata.status_kehamilan, biodata.jumlah_anak,
+                result.id, date,
+                result.who5_total, getWho5Category(result.who5_total),
+                result.gad7_total, getGad7Category(result.gad7_total),
+                result.k10_total, getK10Category(result.k10_total),
+                result.mbi_emosional_total, getMbiSubscaleCategory(result.mbi_emosional_total, 'emosional'),
+                result.mbi_sinis_total, getMbiSubscaleCategory(result.mbi_sinis_total, 'sinis'),
+                result.mbi_pencapaian_total, getMbiSubscaleCategory(result.mbi_pencapaian_total, 'pencapaian'),
+                mbiTotalScore, getMbiTotalCategory(mbiTotalScore),
+                result.naqr_pribadi_total, result.naqr_pekerjaan_total, result.naqr_intimidasi_total,
+                naqrTotalScore, getNaqrCategory(naqrTotalScore)
+            ].map(sanitize);
+
+            csvContent += row.join(',') + '\r\n';
+        });
+
+        // Membuat dan mengunduh file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            const userIdentifier = biodata.email || `user_${biodata.user_id}`;
+            const timestamp = new Date().toISOString().slice(0, 10);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `hasil_kuesioner_${userIdentifier}_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } else {
+            alert('Browser Anda tidak mendukung fitur unduh otomatis. Silakan coba dengan browser lain.');
         }
     }
 
