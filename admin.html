@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dasbor Admin - Asisten Kesejahteraan Diri</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Menggunakan gaya yang konsisten dari file lain */
+        body {
+            font-family: 'Poppins', sans-serif; 
+            scroll-behavior: smooth;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #e0f2fe 0%, #dcfce7 50%, #fef3c7 100%);
+            animation: gradientShift 15s ease infinite;
+            background-size: 400% 400%;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .floating-shape {
+            position: fixed; opacity: 0.1; pointer-events: none;
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        #admin-shape-1 { width: 300px; height: 300px; background: #22c55e; border-radius: 50%; top: 10%; left: 5%; }
+        #admin-shape-2 { width: 200px; height: 200px; background: #3b82f6; border-radius: 50%; bottom: 20%; right: 10%; animation-delay: 2s; }
+
+        /* Sidebar styles disamakan dengan profile.html */
+        .sidebar-gradient {
+            background: linear-gradient(180deg, #065f46 0%, #047857 50%, #059669 100%);
+            position: relative; overflow: hidden;
+        }
+        .sidebar-gradient::before, .sidebar-gradient::after {
+            content: ''; position: absolute; border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+        }
+        .sidebar-gradient::before { width: 300px; height: 300px; top: -50%; right: -20%; animation: float 5s ease-in-out infinite; }
+        .sidebar-gradient::after { width: 250px; height: 250px; bottom: -30%; left: -10%; animation: float 7s ease-in-out infinite reverse; }
+
+        .nav-item {
+            position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+            border-radius: 10px; transition: all 0.3s ease; margin-bottom: 8px;
+        }
+        .nav-item::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+            background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 0 4px 4px 0; opacity: 0; transition: opacity 0.3s ease;
+        }
+        .nav-item:hover { background: rgba(255, 255, 255, 0.15); transform: translateX(4px); }
+        .nav-item:hover::before, .nav-item.active::before { opacity: 1; }
+        .nav-item.active { background: rgba(255, 255, 255, 0.2); }
+
+        .user-profile-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 16px; text-align: center;
+            margin-bottom: 24px; -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(10px);
+        }
+
+        .user-avatar {
+            width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #22c55e 0%, #3b82f6 100%);
+            margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 32px;
+            font-weight: bold; border: 4px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Smooth transitions & hover effects */
+        .transition-smooth { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+
+        /* Loading & Empty state styling */
+        .state-card {
+            text-align: center; padding: 2rem; background-color: white; border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            border-top: 4px solid #10b981;
+        }
+    </style>
+</head>
+<body class="gradient-bg">
+
+    <!-- Bentuk dekoratif -->
+    <div id="admin-shape-1" class="floating-shape"></div>
+    <div id="admin-shape-2" class="floating-shape"></div>
+
+    <div class="relative min-h-screen md:flex">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 sidebar-gradient text-white flex-col p-6 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 md:flex transition-transform duration-300 ease-in-out z-30">
+            <div class="user-profile-card">
+                <div class="user-avatar">
+                    <span id="user-initial">A</span>
+                </div>
+                <h2 id="user-username" class="text-lg font-semibold text-white">Admin</h2>
+                <p class="text-sm text-emerald-100 mt-1">Panel Kontrol</p>
+            </div>
+            
+            <!-- User Navigation (hidden for admin) -->
+            <nav id="user-nav" class="flex-grow hidden">
+                <a href="/profile" class="nav-item">
+                    <span class="text-xl">👤</span>
+                    <span>Profil & Riwayat</span>
+                </a>
+                <a href="/" class="nav-item">
+                    <span class="text-xl">📋</span>
+                    <span>Kuesioner</span>
+                </a>
+            </nav>
+
+            <!-- Admin Navigation -->
+            <nav id="admin-nav" class="flex-grow">
+                <a href="#users" id="nav-users" class="nav-item active">
+                    <span class="text-xl">👥</span>
+                    <span>Pengguna</span>
+                </a>
+            </nav>
+
+            <div id="admin-only-message" class="text-center text-yellow-200 bg-yellow-800/50 p-2 rounded-lg text-sm hidden">
+                Hanya untuk Admin
+            </div>
+            
+            <div class="mt-auto">
+                <button id="logout-button" class="block w-full text-center py-3 px-4 rounded-lg bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition-smooth hover-lift font-semibold shadow-md">
+                    🚪 Keluar
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-10 overflow-y-auto">
+            <div class="mb-8 flex items-center gap-4">
+                <button id="menu-button" aria-label="Buka menu" class="md:hidden text-slate-600 hover:text-slate-800">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+                <div>
+                    <h1 id="admin-title" class="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">Manajemen Pengguna</h1>
+                    <p id="admin-subtitle" class="text-slate-600">Lihat dan kelola semua pengguna terdaftar.</p>
+                </div>
+            </div>
+
+            <!-- Fitur Pencarian -->
+            <div class="my-6">
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                        <svg class="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none"><path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    </span>
+                    <input type="text" id="search-user-input" placeholder="Cari pengguna berdasarkan email..."
+                           class="w-full py-2 pl-10 pr-4 text-gray-700 bg-white border border-gray-300 rounded-lg focus:border-emerald-400 focus:ring-emerald-300 focus:ring-opacity-40 focus:outline-none focus:ring">
+                </div>
+            </div>
+
+            <!-- Container untuk konten dinamis -->
+            <div id="admin-content-area">
+                <!-- Konten akan dirender di sini oleh JavaScript -->
+            </div>
+
+            <!-- Template untuk Loading State -->
+            <template id="loading-template">
+                <div class="state-card">
+                    <p class="text-slate-600">Memuat data...</p>
+                </div>
+            </template>
+
+            <!-- Template untuk Empty State -->
+            <template id="empty-template">
+                <div class="state-card hidden">
+                    <p class="text-slate-600">Tidak ada data yang ditemukan.</p>
+                </div>
+            </template>
+        </main>
+    </div>
+
+    <!-- Modal untuk Detail Pengguna -->
+    <div id="user-detail-modal" class="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col border-t-4 border-emerald-500">
+            <!-- Header Modal -->
+            <header class="p-5 flex justify-between items-center border-b border-gray-200 bg-slate-50 rounded-t-xl">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800">Detail Pengguna</h3>
+                    <p id="modal-user-email" class="text-sm text-slate-500"></p>
+                </div>
+                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800 text-3xl font-light transition-transform hover:rotate-90">&times;</button>
+            </header>
+            
+            <!-- Konten Modal -->
+            <div id="modal-content-area" class="p-6 overflow-y-auto space-y-8">
+                <!-- Placeholder untuk loading, error, atau konten -->
+            </div>
+
+            <!-- Template untuk Konten Modal -->
+            <template id="modal-content-template">
+                <!-- Data Identitas -->
+                <div>
+                    <h4 class="text-lg font-bold text-emerald-700 mb-4">Profil Biodata</h4>
+                    <div id="modal-profile-container" class="card-gradient-border p-8 rounded-xl shadow-xl">
+                        <!-- Biodata akan dirender di sini -->
+                    </div>
+                </div>
+                <!-- Riwayat Hasil Kuesioner -->
+                <div>
+                    <h4 class="text-lg font-bold text-emerald-700 mb-4">Riwayat Kuesioner</h4>
+                    <div id="modal-results-container" class="space-y-4">
+                        <!-- Riwayat akan dirender di sini -->
+                    </div>
+                    <!-- Placeholder untuk detail MBI di modal -->
+                    <div id="modal-mbi-details-placeholder" class="hidden">
+                        <p class="font-bold text-slate-700 text-sm mt-4">MASLACH BURNOUT INVENTORY</p>
+                        <!-- Detail MBI akan dirender di sini -->
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <script src="script.js" defer></script>
+</body>
+</html>

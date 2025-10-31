@@ -49,6 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderProfilePage(); // Render data profil dan riwayat
     } else if (path === '/identity_form') {
         // Event listener untuk form identitas sudah ada di bawah
+        fetchUserProfile();
+    } else if (path === '/admin') {
         // Isi email pengguna saat form dimuat
         fetchUserProfile();
     } else if (loginForm) {
@@ -92,7 +94,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response.ok) {
                     const data = await response.json();
                     localStorage.setItem('token', data.access_token);
-                    window.location.href = '/';
+
+                    // Setelah login, periksa apakah pengguna adalah admin
+                    const userProfileResponse = await fetch(`${API_BASE_URL}/users/me`, {
+                        headers: { 'Authorization': `Bearer ${data.access_token}` }
+                    });
+
+                    if (userProfileResponse.ok) {
+                        const user = await userProfileResponse.json();
+                        if (user.role === 'admin') {
+                            window.location.href = '/admin'; // Arahkan admin ke dasbor admin
+                        } else {
+                            // Untuk pengguna biasa, periksa apakah profil mereka sudah lengkap
+                            const profileStatusResponse = await fetch(`${API_BASE_URL}/users/profile/status`, { 
+                                headers: { 'Authorization': `Bearer ${data.access_token}` } 
+                            });
+
+                            if (profileStatusResponse.ok) {
+                                const profileStatus = await profileStatusResponse.json();
+                                if (profileStatus.has_identity) {
+                                    window.location.href = '/'; // Profil lengkap, arahkan ke halaman utama
+                                } else {
+                                    window.location.href = '/identity_form'; // Profil belum lengkap, arahkan ke form
+                                }
+                            } else {
+                                // Jika gagal memeriksa status, arahkan ke form sebagai fallback
+                                window.location.href = '/identity_form';
+                            }
+                        }
+                    } else {
+                        // Jika gagal mendapatkan profil setelah login, arahkan ke halaman utama sebagai fallback
+                        window.location.href = '/';
+                    }
                 } else {
                     let errorMsg = 'Login failed. Please check your credentials.';
                     try {
@@ -235,18 +268,28 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (response.ok) {
                 const user = await response.json();
+
+                // Jika user adalah admin dan tidak sedang di halaman admin, alihkan ke /admin.
+                if (user.role === 'admin' && path !== '/admin') {
+                    window.location.href = '/admin';
+                    return; // Hentikan eksekusi lebih lanjut untuk menghindari error
+                }
+
                 const initial = user.email.charAt(0).toUpperCase();
                 // Isi elemen di dalam dan di bawah lingkaran dengan inisial
                 if (userInitial) userInitial.textContent = initial;
-                if (userUsername) {
-                    userUsername.textContent = initial;
-                }
+                if (userUsername) userUsername.textContent = user.role === 'admin' ? 'Admin' : initial;
                 // Jika di form identitas, isi field email dan buat read-only
                 const emailInput = document.getElementById('email');
-                if (emailInput && window.location.pathname === '/identity_form') {
+                if (emailInput && path === '/identity_form') {
                     emailInput.value = user.email;
                     emailInput.readOnly = true;
                     emailInput.classList.add('bg-slate-100');
+                }
+
+                // Jika di halaman admin, jalankan logika admin
+                if (path === '/admin') {
+                    renderAdminPage(user.role === 'admin');
                 }
             } else if (response.status === 401) {
                 // Token tidak valid, logout
@@ -260,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function checkProfileStatus() {
         if (!token) return;
+        // Fungsi ini sekarang hanya untuk pengguna biasa, karena admin sudah dialihkan oleh fetchUserProfile()
         try {
             const response = await fetch(`${API_BASE_URL}/users/profile/status`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -284,6 +328,407 @@ document.addEventListener('DOMContentLoaded', () => {
             // window.location.href = '/login';
         }
     }
+
+    // --- Fungsi untuk Halaman Admin ---
+    async function renderAdminPage(isAdmin) {
+        const adminNav = document.getElementById('admin-nav');
+        const userNav = document.getElementById('user-nav');
+        const adminOnlyMessage = document.getElementById('admin-only-message');
+        const contentArea = document.getElementById('admin-content-area');
+
+        if (!isAdmin) {
+            // Jika bukan admin, sembunyikan navigasi admin dan tampilkan pesan
+            if(adminNav) adminNav.classList.add('hidden');
+            if(userNav) userNav.classList.remove('hidden'); // Tampilkan nav user biasa
+            if(adminOnlyMessage) adminOnlyMessage.classList.remove('hidden');
+            contentArea.innerHTML = `<div class="state-card"><p class="text-red-600">Anda tidak memiliki hak akses untuk melihat halaman ini.</p></div>`;
+            return;
+        }
+
+        // Tampilkan navigasi admin jika belum terlihat
+        if(adminNav) adminNav.classList.remove('hidden');
+        if(userNav) userNav.classList.add('hidden');
+
+        const navLinks = {
+            users: document.getElementById('nav-users'),
+        };
+
+        const titles = {
+            users: { title: 'Manajemen Pengguna', sub: 'Lihat dan kelola semua pengguna terdaftar.' },
+        };
+
+        const adminTitle = document.getElementById('admin-title');
+        const adminSubtitle = document.getElementById('admin-subtitle');
+
+        // Fungsi untuk memuat konten berdasarkan hash
+        const loadContent = async () => {
+            const hash = window.location.hash.substring(1) || 'users';
+            
+            // Update UI (judul dan link aktif)
+            Object.values(navLinks).forEach(link => link?.classList.remove('active'));
+            if (navLinks[hash]) navLinks[hash].classList.add('active');
+            if (titles[hash]) {
+                adminTitle.textContent = titles[hash].title;
+                adminSubtitle.textContent = titles[hash].sub;
+            }
+
+            // Tampilkan loading
+            contentArea.innerHTML = document.getElementById('loading-template').innerHTML;
+
+            try {
+                let endpoint = '';
+                if (hash === 'users') endpoint = '/users/admin/all-users';
+                else {
+                    contentArea.innerHTML = `<div class="state-card"><p>Konten tidak ditemukan. Mengarahkan ke Manajemen Pengguna...</p></div>`;
+                    window.location.hash = 'users'; // Default ke #users jika hash tidak valid
+                    return;
+                }
+
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error(`Gagal memuat data dari ${endpoint}`);
+
+                const data = await response.json();
+
+                if (!data || data.length === 0) {
+                    contentArea.innerHTML = document.getElementById('empty-template').innerHTML;
+                    contentArea.querySelector('.state-card').classList.remove('hidden');
+                    return;
+                }
+
+                // Render data
+                let contentHtml = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">';
+                if (hash === 'users') {
+                    // Urutkan data berdasarkan ID pengguna secara menurun (terbaru di atas)
+                    data.sort((a, b) => b.id - a.id);
+
+                    data.forEach(user => {
+                        const initial = user.email.charAt(0).toUpperCase();
+                        contentHtml += `
+                            <button data-user-id="${user.id}" class="user-card-btn text-left block bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-t-4 border-emerald-400 hover-lift">
+                                <div class="flex items-center space-x-4">
+                                    <div class="flex-shrink-0 w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white text-xl font-bold">${initial}</div>
+                                    <div>
+                                        <p class="text-base font-bold text-slate-800 truncate" title="${user.email}">${user.email}</p>
+                                        <p class="text-sm text-slate-500">ID: ${user.id}</p>
+                                        <p class="text-xs text-slate-400 mt-1">Peran: <span class="font-semibold">${user.role}</span></p>
+                                    </div>
+                                </div>
+                            </button>`;
+                    });
+                }
+                // TODO: Tambahkan rendering untuk 'profiles' dan 'results' di sini
+                contentHtml += '</div>';
+                contentArea.innerHTML = contentHtml;
+
+                // Tambahkan event listener ke semua tombol kartu pengguna
+                document.querySelectorAll('.user-card-btn').forEach(button => {
+                    button.addEventListener('click', () => handleUserCardClick(button.dataset.userId));
+                });
+
+                // Tambahkan event listener untuk fitur pencarian
+                const searchInput = document.getElementById('search-user-input');
+                if (searchInput) {
+                    searchInput.addEventListener('input', () => {
+                        const searchTerm = searchInput.value.toLowerCase();
+                        const userCards = document.querySelectorAll('.user-card-btn');
+                        let visibleCount = 0;
+
+                        userCards.forEach(card => {
+                            const userEmail = card.querySelector('p[title]').textContent.toLowerCase();
+                            if (userEmail.includes(searchTerm)) {
+                                card.style.display = 'block';
+                                visibleCount++;
+                            } else {
+                                card.style.display = 'none';
+                            }
+                        });
+
+                        // Tampilkan pesan jika tidak ada hasil pencarian
+                        let emptySearchMessage = document.getElementById('empty-search-message');
+                        if (!emptySearchMessage) {
+                            emptySearchMessage = document.createElement('div');
+                            emptySearchMessage.id = 'empty-search-message';
+                            emptySearchMessage.className = 'state-card hidden';
+                            contentArea.appendChild(emptySearchMessage);
+                        }
+                        emptySearchMessage.innerHTML = `<p class="text-slate-600">Tidak ada pengguna yang cocok dengan pencarian "${searchInput.value}".</p>`;
+                        emptySearchMessage.classList.toggle('hidden', visibleCount > 0);
+                    });
+                }
+
+            } catch (error) {
+                console.error('Error loading admin content:', error);
+                contentArea.innerHTML = `<div class="state-card"><p class="text-red-600">Gagal memuat data. Silakan coba lagi.</p></div>`;
+            }
+        };
+
+        // Event listener untuk perubahan hash dan pemuatan awal
+        window.addEventListener('hashchange', loadContent);
+        loadContent(); // Muat konten saat halaman pertama kali dibuka
+    }
+
+    // --- Fungsi untuk Modal Detail Pengguna di Halaman Admin ---
+    async function handleUserCardClick(userId) {
+        const modal = document.getElementById('user-detail-modal');
+        const modalContentArea = document.getElementById('modal-content-area');
+        const modalUserEmail = document.getElementById('modal-user-email');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+        // Tampilkan modal dan status loading
+        modal.classList.remove('hidden');
+        modalUserEmail.textContent = `ID Pengguna: ${userId}`;
+        modalContentArea.innerHTML = `<div class="text-center p-8"><p class="text-slate-600">Memuat detail pengguna...</p></div>`;
+
+        // Fungsi untuk menutup modal
+        const closeModal = () => modal.classList.add('hidden');
+        closeModalBtn.onclick = closeModal;
+        modal.onclick = (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
+
+        try {
+            // Panggil kedua endpoint secara bersamaan menggunakan Promise.all
+            const [profileResponse, resultsResponse] = await Promise.all([
+                fetch(`${API_BASE_URL}/users/admin/profile/${userId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }),
+                fetch(`${API_BASE_URL}/users/admin/health-results/${userId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+            ]);
+
+            // Periksa apakah kedua panggilan berhasil
+            if (!profileResponse.ok) {
+                throw new Error(`Gagal memuat profil: ${profileResponse.statusText}`);
+            }
+            if (!resultsResponse.ok) {
+                throw new Error(`Gagal memuat riwayat: ${resultsResponse.statusText}`);
+            }
+
+            const profileData = await profileResponse.json();
+            const healthResults = await resultsResponse.json();
+
+            // Gabungkan data untuk diteruskan ke fungsi render
+            const combinedData = {
+                ...profileData, // Ini akan menyertakan biodata dan biodata_completed
+                health_results: healthResults,
+                health_results_completed: healthResults && healthResults.length > 0
+            };
+            modalUserEmail.textContent = combinedData.biodata?.email || `ID Pengguna: ${userId}`;
+
+            // Render konten ke dalam modal
+            renderUserDetailModal(combinedData);
+
+        } catch (error) {
+            console.error('Error fetching user detail:', error);
+            modalContentArea.innerHTML = `<div class="text-center p-8"><p class="text-red-600">Gagal memuat detail pengguna. Silakan coba lagi.</p></div>`;
+        }
+    }
+
+    // --- Fungsi Helper untuk Kategori Hasil ---
+    function getWho5Category(score) {
+        if (score <= 11) return 'Gejala Depresi Berat';
+        if (score <= 13) return 'Gejala Depresi Sedang';
+        if (score <= 15) return 'Gejala Depresi Ringan';
+        return 'Tidak ada gejala Depresi';
+    }
+
+    function getGad7Category(score) {
+        if (score <= 4) return 'Kecemasan Minimal';
+        if (score <= 9) return 'Kecemasan Ringan';
+        if (score <= 14) return 'Kecemasan Sedang';
+        return 'Kecemasan Berat';
+    }
+
+    function getK10Category(score) {
+        if (score <= 15) return 'Distres rendah';
+        if (score <= 21) return 'Distres sedang';
+        if (score <= 29) return 'Distres tinggi';
+        return 'Distres sangat tinggi';
+    }
+
+    function getMbiSubscaleCategory(score, subscale) {
+        switch (subscale) {
+            case 'emosional':
+                if (score < 14) return 'Rendah';
+                if (score <= 23) return 'Sedang';
+                return 'Tinggi';
+            case 'sinis':
+                if (score < 3) return 'Rendah';
+                if (score <= 8) return 'Sedang';
+                return 'Tinggi';
+            case 'pencapaian':
+                if (score < 11) return 'Rendah';
+                if (score <= 18) return 'Sedang';
+                return 'Tinggi';
+            default:
+                return 'N/A';
+        }
+    }
+
+    function getMbiTotalCategory(score) {
+        if (score < 32) return 'Rendah';
+        if (score <= 49) return 'Sedang';
+        return 'Tinggi';
+    }
+
+    function getNaqrCategory(score) {
+        if (score <= 33) return 'Rendah / Tidak ada';
+        if (score <= 55) return 'Sedang';
+        if (score <= 77) return 'Tinggi';
+        return 'Sangat tinggi';
+    }
+
+    function createHealthResultCardHTML(result, isAdminView = false) {
+        const d = new Date(result.created_at);
+        const datePart = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        const timePart = [d.getHours(), d.getMinutes(), d.getSeconds()].map(num => String(num).padStart(2, '0')).join(':');
+        const date = `${datePart}, ${timePart}`;
+
+        const who5Category = getWho5Category(result.who5_total);
+        const gad7Category = getGad7Category(result.gad7_total);
+        const k10Category = getK10Category(result.k10_total);
+        const mbiEmosionalCategory = getMbiSubscaleCategory(result.mbi_emosional_total, 'emosional');
+        const mbiSinisCategory = getMbiSubscaleCategory(result.mbi_sinis_total, 'sinis');
+        const mbiPencapaianCategory = getMbiSubscaleCategory(result.mbi_pencapaian_total, 'pencapaian');
+        // Hitung total skor MBI secara manual di frontend
+        const mbiTotalScore = result.mbi_emosional_total + result.mbi_sinis_total + result.mbi_pencapaian_total;
+        const mbiTotalCategory = getMbiTotalCategory(mbiTotalScore);
+        // Hitung total skor NAQ-R secara manual di frontend
+        const naqrTotalScore = result.naqr_pribadi_total + result.naqr_pekerjaan_total + result.naqr_intimidasi_total;
+        const naqrCategory = getNaqrCategory(naqrTotalScore);
+        const cardId = `result-card-${result.id}`;
+
+        const deleteButtonHTML = isAdminView ? '' : `
+            <button data-result-id="${result.id}" class="delete-result-btn px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors duration-200">
+                HAPUS
+            </button>
+        `;
+
+        return `
+            <div id="${cardId}" class="bg-white p-6 rounded-lg shadow-md border-l-4 border-emerald-500 mb-6">
+                <div class="flex justify-between items-start mb-6 pb-4 border-b border-slate-200">
+                    <div>
+                        <p class="text-sm font-semibold text-slate-600 mb-1">Tanggal Pengisian</p>
+                        <p class="text-lg font-bold text-slate-800">${date}</p>
+                    </div>
+                    ${deleteButtonHTML}
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="bg-gradient-to-br from-emerald-50 to-green-50 p-4 rounded-lg border border-emerald-200">
+                        <div class="flex items-center gap-2 mb-3"><div class="w-3 h-3 bg-emerald-500 rounded-full"></div><p class="font-bold text-slate-700 text-sm">WELL-BEING INDEX</p></div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between items-center"><span class="font-medium text-slate-600">Skor:</span><span class="font-bold text-emerald-700">${result.who5_total}/30</span></div>
+                            <div class="flex justify-between items-center"><span class="font-medium text-slate-600">Kategori:</span><span class="font-semibold text-emerald-600 px-2 py-1 bg-emerald-100 rounded-full text-xs">${who5Category}</span></div>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-lg border border-blue-200">
+                        <div class="flex items-center gap-2 mb-3"><div class="w-3 h-3 bg-blue-500 rounded-full"></div><p class="font-bold text-slate-700 text-sm">GAD-7 (ANXIETY)</p></div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between items-center"><span class="font-medium text-slate-600">Skor:</span><span class="font-bold text-blue-700">${result.gad7_total}/21</span></div>
+                            <div class="flex justify-between items-center"><span class="font-medium text-slate-600">Kategori:</span><span class="font-semibold text-blue-600 px-2 py-1 bg-blue-100 rounded-full text-xs">${gad7Category}</span></div>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-lg border border-purple-200">
+                        <div class="flex items-center gap-2 mb-3"><div class="w-3 h-3 bg-purple-500 rounded-full"></div><p class="font-bold text-slate-700 text-sm">KESSLER (K10)</p></div>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between items-center"><span class="font-medium text-slate-600">Skor:</span><span class="font-bold text-purple-700">${result.k10_total}/50</span></div>
+                            <div class="flex justify-between items-center"><span class="font-medium text-slate-600">Kategori:</span><span class="font-semibold text-purple-600 px-2 py-1 bg-purple-100 rounded-full text-xs">${k10Category}</span></div>
+                        </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-200 md:col-span-2 lg:col-span-3">
+                        <div class="flex items-center gap-2 mb-4"><div class="w-3 h-3 bg-orange-500 rounded-full"></div><p class="font-bold text-slate-700 text-sm">MASLACH BURNOUT INVENTORY</p></div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div class="text-center"><p class="font-medium text-slate-600 mb-2">Kelelahan Emosional</p><div class="bg-white p-3 rounded-lg border border-orange-200"><p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_emosional_total}</p><span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${mbiEmosionalCategory}</span></div></div>
+                            <div class="text-center"><p class="font-medium text-slate-600 mb-2">Sikap Sinis</p><div class="bg-white p-3 rounded-lg border border-orange-200"><p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_sinis_total}</p><span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${mbiSinisCategory}</span></div></div>
+                            <div class="text-center"><p class="font-medium text-slate-600 mb-2">Pencapaian Pribadi</p><div class="bg-white p-3 rounded-lg border border-orange-200"><p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_pencapaian_total}</p><span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${mbiPencapaianCategory}</span></div></div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-orange-200 text-center"><p class="font-medium text-slate-600">Total Skor: <span class="font-bold text-orange-700 text-lg">${mbiTotalScore}</span><br><span class="font-semibold text-orange-600 px-2 py-1 bg-orange-100 rounded-full text-xs">${mbiTotalCategory}</span></p></div>
+                    </div>
+                    <div class="bg-gradient-to-br from-red-50 to-rose-50 p-4 rounded-lg border border-red-200 md:col-span-2 lg:col-span-3">
+                        <div class="flex items-center gap-2 mb-4"><div class="w-3 h-3 bg-red-500 rounded-full"></div><p class="font-bold text-slate-700 text-sm">NAQ-R (PERUNDUNGAN)</p></div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div class="text-center"><p class="font-medium text-slate-600 mb-2">Perundungan Pribadi</p><div class="bg-white p-3 rounded-lg border border-red-200"><p class="text-2xl font-bold text-red-600">${result.naqr_pribadi_total}</p></div></div>
+                            <div class="text-center"><p class="font-medium text-slate-600 mb-2">Perundungan Pekerjaan</p><div class="bg-white p-3 rounded-lg border border-red-200"><p class="text-2xl font-bold text-red-600">${result.naqr_pekerjaan_total}</p></div></div>
+                            <div class="text-center"><p class="font-medium text-slate-600 mb-2">Intimidasi</p><div class="bg-white p-3 rounded-lg border border-red-200"><p class="text-2xl font-bold text-red-600">${result.naqr_intimidasi_total}</p></div></div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-red-200 text-center"><p class="font-medium text-slate-600">Total Skor: <span class="font-bold text-red-700 text-lg">${naqrTotalScore}</span><br><span class="font-semibold text-red-600 px-2 py-1 bg-red-100 rounded-full text-xs">${naqrCategory}</span></p></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderUserDetailModal(data) {
+        const modalContentArea = document.getElementById('modal-content-area');
+        const template = document.getElementById('modal-content-template');
+        modalContentArea.innerHTML = template.innerHTML;
+
+        const profileContainer = document.getElementById('modal-profile-container');
+        const resultsContainer = document.getElementById('modal-results-container');
+
+        // Render Biodata
+        if (data.biodata_completed && data.biodata) {
+            // Replikasi gaya dari halaman profil
+            const styles = [
+                { bg: 'from-emerald-50 to-blue-50', border: 'border-emerald-400', text: 'text-emerald-700' },
+                { bg: 'from-blue-50 to-emerald-50', border: 'border-blue-400', text: 'text-blue-700' },
+                { bg: 'from-orange-50 to-emerald-50', border: 'border-orange-400', text: 'text-orange-700' },
+                { bg: 'from-emerald-50 to-orange-50', border: 'border-emerald-400', text: 'text-emerald-700' },
+                { bg: 'from-blue-50 to-orange-50', border: 'border-blue-400', text: 'text-blue-700' },
+                { bg: 'from-orange-50 to-blue-50', border: 'border-orange-400', text: 'text-orange-700' },
+            ];
+            let biodataHtml = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">';
+            const biodataFields = {
+                "Email": data.biodata.email,
+                "Inisial": data.biodata.inisial,
+                "No Kontak": data.biodata.no_wa,
+                "Usia": data.biodata.usia,
+                "Jenis Kelamin": data.biodata.jenis_kelamin,
+                "Pendidikan": data.biodata.pendidikan,
+                "Lama Bekerja": data.biodata.lama_bekerja,
+                "Status Pegawai": data.biodata.status_pegawai,
+                "Jabatan": data.biodata.jabatan_lain || data.biodata.jabatan,
+                "Unit/Ruangan": data.biodata.unit_ruangan,
+                "Status Perkawinan": data.biodata.status_perkawinan,
+                "Status Kehamilan": data.biodata.status_kehamilan,
+                "Jumlah Anak": data.biodata.jumlah_anak,
+            };
+            let styleIndex = 0;
+            for (const [label, value] of Object.entries(biodataFields)) {
+                const style = styles[styleIndex % styles.length];
+                biodataHtml += `
+                    <div class="p-4 bg-gradient-to-br ${style.bg} rounded-lg border-l-4 ${style.border}">
+                        <strong class="font-semibold ${style.text} block text-sm">${label}</strong>
+                        <span class="text-slate-700 font-medium">${value !== null && value !== undefined ? value : 'N/A'}</span>
+                    </div>
+                `;
+                styleIndex++;
+            }
+            biodataHtml += '</div>';
+            profileContainer.innerHTML = biodataHtml;
+        } else {
+            profileContainer.innerHTML = '<p class="text-slate-500 text-center">Pengguna belum melengkapi biodata.</p>';
+        }
+
+        // Render Riwayat Hasil Kuesioner
+        if (data.health_results_completed && data.health_results && data.health_results.length > 0) {
+            let resultsHtml = '';
+            data.health_results.forEach(result => {
+                // Gunakan fungsi terpusat, isAdminView = true untuk menyembunyikan tombol hapus
+                resultsHtml += createHealthResultCardHTML(result, true);
+            });
+            resultsContainer.innerHTML = resultsHtml;
+        } else {
+            resultsContainer.innerHTML = '<p class="text-slate-500 text-center">Pengguna tidak memiliki riwayat kuesioner.</p>';
+        }
+    }
+
     async function renderProfilePage() {
         // Ambil semua elemen DOM yang dibutuhkan
         const profileLoading = document.getElementById('profile-loading');
@@ -346,174 +791,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 profileEmpty.classList.remove('hidden');
             }
 
-// Render Riwayat Hasil Kuesioner
-        if (data.health_results_completed && data.health_results && data.health_results.length > 0) {
-            resultsContainer.classList.remove('hidden');
-            resultsEmpty.classList.add('hidden');
+            // Render Riwayat Hasil Kuesioner
+            if (data.health_results_completed && data.health_results && data.health_results.length > 0) {
+                resultsContainer.classList.remove('hidden');
+                resultsEmpty.classList.add('hidden');
 
-            let allResultCards = '';
-            data.health_results.forEach(result => {
-                const d = new Date(result.created_at);
-                const datePart = d.toLocaleDateString('id-ID', {
-                    day: 'numeric', 
-                    month: 'long', 
-                    year: 'numeric'
+                let allResultCards = '';
+                data.health_results.forEach(result => {
+                    // Gunakan fungsi terpusat, isAdminView = false untuk menampilkan tombol hapus
+                    allResultCards += createHealthResultCardHTML(result, false);
                 });
-                // Format waktu secara manual untuk konsistensi HH:mm:ss
-                const timePart = [d.getHours(), d.getMinutes(), d.getSeconds()].map(num => String(num).padStart(2, '0')).join(':');
-                const date = `${datePart}, ${timePart}`;
-                const cardId = `result-card-${result.id}`;
                 
-                allResultCards += `
-                    <div id="${cardId}" class="bg-white p-6 rounded-lg shadow-md border-l-4 border-emerald-500 mb-6">
-                        <!-- Header Kartu -->
-                        <div class="flex justify-between items-start mb-6 pb-4 border-b border-slate-200">
-                            <div>
-                                <p class="text-sm font-semibold text-slate-600 mb-1">Tanggal Pengisian</p>
-                                <p class="text-lg font-bold text-slate-800">${date}</p>
-                            </div>
-                            <button data-result-id="${result.id}" class="delete-result-btn px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors duration-200">
-                                HAPUS
-                            </button>
-                        </div>
+                resultsContainer.innerHTML = allResultCards;
 
-                        <!-- Grid Layout untuk Semua Tes -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            
-                            <!-- WHO-5 WELL-BEING INDEX -->
-                            <div class="bg-gradient-to-br from-emerald-50 to-green-50 p-4 rounded-lg border border-emerald-200">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <div class="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                                    <p class="font-bold text-slate-700 text-sm">WELL-BEING INDEX</p>
-                                </div>
-                                <div class="space-y-2 text-sm">
-                                    <div class="flex justify-between items-center">
-                                        <span class="font-medium text-slate-600">Skor:</span>
-                                        <span class="font-bold text-emerald-700">${result.who5_total}/30</span>
-                                    </div>
-                                    <div class="flex justify-between items-center">
-                                        <span class="font-medium text-slate-600">Kategori:</span>
-                                        <span class="font-semibold text-emerald-600 px-2 py-1 bg-emerald-100 rounded-full text-xs">${result.who5_category}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- GAD-7 -->
-                            <div class="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-lg border border-blue-200">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
-                                    <p class="font-bold text-slate-700 text-sm">GAD-7 (ANXIETY)</p>
-                                </div>
-                                <div class="space-y-2 text-sm">
-                                    <div class="flex justify-between items-center">
-                                        <span class="font-medium text-slate-600">Skor:</span>
-                                        <span class="font-bold text-blue-700">${result.gad7_total}/21</span>
-                                    </div>
-                                    <div class="flex justify-between items-center">
-                                        <span class="font-medium text-slate-600">Kategori:</span>
-                                        <span class="font-semibold text-blue-600 px-2 py-1 bg-blue-100 rounded-full text-xs">${result.gad7_category}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Kessler (K10) -->
-                            <div class="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-lg border border-purple-200">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
-                                    <p class="font-bold text-slate-700 text-sm">KESSLER (K10)</p>
-                                </div>
-                                <div class="space-y-2 text-sm">
-                                    <div class="flex justify-between items-center">
-                                        <span class="font-medium text-slate-600">Skor:</span>
-                                        <span class="font-bold text-purple-700">${result.k10_total}/50</span>
-                                    </div>
-                                    <div class="flex justify-between items-center">
-                                        <span class="font-medium text-slate-600">Kategori:</span>
-                                        <span class="font-semibold text-purple-600 px-2 py-1 bg-purple-100 rounded-full text-xs">${result.k10_category}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Maslach Burnout Inventory -->
-                            <div class="bg-gradient-to-br from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-200 md:col-span-2 lg:col-span-3">
-                                <div class="flex items-center gap-2 mb-4">
-                                    <div class="w-3 h-3 bg-orange-500 rounded-full"></div>
-                                    <p class="font-bold text-slate-700 text-sm">MASLACH BURNOUT INVENTORY</p>
-                                </div>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                    <div class="text-center">
-                                        <p class="font-medium text-slate-600 mb-2">Kelelahan Emosional</p>
-                                        <div class="bg-white p-3 rounded-lg border border-orange-200">
-                                            <p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_emosional_total}</p>
-                                            <span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${result.mbi_emosional_category}</span>
-                                        </div>
-                                    </div>
-                                    <div class="text-center">
-                                        <p class="font-medium text-slate-600 mb-2">Sikap Sinis</p>
-                                        <div class="bg-white p-3 rounded-lg border border-orange-200">
-                                            <p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_sinis_total}</p>
-                                            <span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${result.mbi_sinis_category}</span>
-                                        </div>
-                                    </div>
-                                    <div class="text-center">
-                                        <p class="font-medium text-slate-600 mb-2">Pencapaian Pribadi</p>
-                                        <div class="bg-white p-3 rounded-lg border border-orange-200">
-                                            <p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_pencapaian_total}</p>
-                                            <span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${result.mbi_pencapaian_category}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mt-4 pt-3 border-t border-orange-200 text-center">
-                                    <p class="font-medium text-slate-600">Total Skor: <span class="font-bold text-orange-700 text-lg">${result.mbi_total}</span></p>
-                                </div>
-                            </div>
-
-                            <!-- NAQ-R -->
-                            <div class="bg-gradient-to-br from-red-50 to-rose-50 p-4 rounded-lg border border-red-200 md:col-span-2 lg:col-span-3">
-                                <div class="flex items-center gap-2 mb-4">
-                                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
-                                    <p class="font-bold text-slate-700 text-sm">NAQ-R (PERUNDUNGAN)</p>
-                                </div>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                    <div class="text-center">
-                                        <p class="font-medium text-slate-600 mb-2">Perundungan Pribadi</p>
-                                        <div class="bg-white p-3 rounded-lg border border-red-200">
-                                            <p class="text-2xl font-bold text-red-600">${result.naqr_pribadi_total}</p>
-                                        </div>
-                                    </div>
-                                    <div class="text-center">
-                                        <p class="font-medium text-slate-600 mb-2">Perundungan Pekerjaan</p>
-                                        <div class="bg-white p-3 rounded-lg border border-red-200">
-                                            <p class="text-2xl font-bold text-red-600">${result.naqr_pekerjaan_total}</p>
-                                        </div>
-                                    </div>
-                                    <div class="text-center">
-                                        <p class="font-medium text-slate-600 mb-2">Intimidasi</p>
-                                        <div class="bg-white p-3 rounded-lg border border-red-200">
-                                            <p class="text-2xl font-bold text-red-600">${result.naqr_intimidasi_total}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mt-4 pt-3 border-t border-red-200 text-center">
-                                    <p class="font-medium text-slate-600">Total Skor: <span class="font-bold text-red-700 text-lg">${result.naqr_total}</span></p>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                `;
-            });
-            
-            resultsContainer.innerHTML = allResultCards;
-
-            // Tambahkan event listener untuk semua tombol hapus
-            document.querySelectorAll('.delete-result-btn').forEach(button => {
-                button.addEventListener('click', handleDeleteResult);
-            });
-        } else {
-            resultsContainer.classList.add('hidden');
-            resultsEmpty.classList.remove('hidden');
-        }
+                // Tambahkan event listener untuk semua tombol hapus
+                document.querySelectorAll('.delete-result-btn').forEach(button => {
+                    button.addEventListener('click', handleDeleteResult);
+                });
+            } else {
+                resultsContainer.classList.add('hidden');
+                resultsEmpty.classList.remove('hidden');
+            }
 
         } catch (error) {
             console.error('Error rendering profile page:', error);
@@ -526,6 +824,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
     }
+
     async function openEditModal(profileData) {
         const modal = document.getElementById('edit-profile-modal');
         const modalContent = document.getElementById('modal-content');
