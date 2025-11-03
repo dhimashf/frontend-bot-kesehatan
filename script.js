@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Elemen UI ---
     const loginForm = document.getElementById('login-form');
     const registerForm = document.getElementById('register-form');
+    const googleLoginBtn = document.getElementById('google-login-btn');
     const identityForm = document.getElementById('identity-form');
     const logoutButton = document.getElementById('logout-button');
     const userInitial = document.getElementById('user-initial');
@@ -34,18 +35,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- AUTHENTICATION DISABLED FOR DEVELOPMENT ---
     // Bagian ini dinonaktifkan agar bisa melihat halaman internal tanpa login.
     // Aktifkan kembali untuk mode produksi.
-    if (!isAuthPage) { // Jika ini BUKAN halaman login/register, maka ini adalah halaman yang dilindungi
-        if (!token) {
+    // Tangani callback Google Auth SEBELUM melakukan pengecekan token lainnya.
+    // Fungsi ini akan me-reload halaman jika menemukan token di URL.
+    const handled = handleGoogleAuthCallback();
+    
+    // Hanya jalankan pengecekan token jika BUKAN halaman auth DAN callback Google tidak sedang ditangani.
+    if (!isAuthPage && !handled) { 
+        // Jika tidak ada token di localStorage, arahkan ke login.
+        if (!token) { 
             window.location.href = '/login';
             return; // Hentikan eksekusi jika tidak ada token
         }
-        fetchUserProfile();
+        fetchUserProfile(); // Jika ada token, ambil profil pengguna.
     }
 
     // Jalankan logika spesifik berdasarkan halaman yang sedang aktif
-    if (path === '/') {
-        checkProfileStatus(); // Cek apakah biodata sudah lengkap
-    } else if (path === '/profile') {
+    if (path === '/profile') {
         renderProfilePage(); // Render data profil dan riwayat
     } else if (path === '/identity_form') {
         // Event listener untuk form identitas sudah ada di bawah
@@ -143,6 +148,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 errorMessage.textContent = 'An unexpected network error occurred. Please try again.';
                 errorMessage.classList.remove('hidden');
             }
+        });
+    }
+
+    if (googleLoginBtn) {
+        googleLoginBtn.addEventListener('click', () => {
+            // Arahkan pengguna ke endpoint login Google di backend
+            window.location.href = `${API_BASE_URL}/auth/google/login`;
         });
     }
 
@@ -256,6 +268,26 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('jabatan')?.addEventListener('change', (e) => {
             toggleOther(e.target, 'jabatan_other');
         });
+    }
+
+    // --- Fungsi untuk menangani callback dari Google Auth ---
+    function handleGoogleAuthCallback() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const googleToken = urlParams.get('token');
+
+        if (googleToken) {
+            // 1. Simpan token ke localStorage
+            localStorage.setItem('token', googleToken);
+    
+            // 2. Hapus token dari URL dan muat ulang halaman.
+            // Backend sudah mengarahkan kita ke halaman yang benar (/ atau /identity_form).
+            // Tugas frontend hanya menyimpan token dan membersihkan URL.
+            // Reload memastikan semua skrip berjalan dengan state login yang benar.
+            window.location.replace(window.location.pathname);
+            
+            return true; // Menandakan bahwa callback sedang ditangani
+        }
+        return false; // Tidak ada token di URL, lanjutkan eksekusi normal
     }
 
     // --- Fungsi untuk Halaman Utama (index.html) ---
@@ -377,21 +409,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 let endpoint = '';
-                if (hash === 'users') endpoint = '/users/admin/all-users';
-                else {
+                if (hash !== 'users') {
                     contentArea.innerHTML = `<div class="state-card"><p>Konten tidak ditemukan. Mengarahkan ke Manajemen Pengguna...</p></div>`;
                     window.location.hash = 'users'; // Default ke #users jika hash tidak valid
                     return;
                 }
 
-                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                // Gunakan endpoint baru yang kaya data sesuai instruksi dari backend.
+                const response = await fetch(`${API_BASE_URL}/users/admin/all-results-with-biodata`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (!response.ok) throw new Error(`Gagal memuat data dari ${endpoint}`);
 
                 const data = await response.json();
-
+                
                 if (!data || data.length === 0) {
                     contentArea.innerHTML = document.getElementById('empty-template').innerHTML;
                     contentArea.querySelector('.state-card').classList.remove('hidden');
@@ -402,18 +434,49 @@ document.addEventListener('DOMContentLoaded', () => {
                 let contentHtml = '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">';
                 if (hash === 'users') {
                     // Urutkan data berdasarkan ID pengguna secara menurun (terbaru di atas)
-                    data.sort((a, b) => b.id - a.id);
+                    data.sort((a, b) => {
+                        const idA = a.health_results?.[0]?.user_id || a.biodata?.user_id || 0;
+                        const idB = b.health_results?.[0]?.user_id || b.biodata?.user_id || 0;
+                        return idB - idA;
+                    });
 
                     data.forEach(user => {
-                        const initial = user.email.charAt(0).toUpperCase();
+                        // Tentukan status berdasarkan keberadaan data, bukan flag boolean.
+                        // Profil dianggap ada jika objek biodata dan email ada.
+                        const hasProfile = !!user.biodata && !!user.biodata.email;
+                        // Hasil dianggap ada jika array health_results tidak kosong.
+                        const hasResults = Array.isArray(user.health_results) && user.health_results.length > 0;
+
+                        let statusColor, statusTooltip;
+                        
+                        if (hasProfile && hasResults) {
+                            statusColor = 'bg-green-500'; // Hijau: Profil & Riwayat lengkap
+                            statusTooltip = 'Profil dan Riwayat Lengkap';
+                        } else if (hasProfile && !hasResults) {
+                            statusColor = 'bg-yellow-500'; // Kuning: Profil lengkap, riwayat kosong
+                            statusTooltip = 'Profil Lengkap, Riwayat Kosong';
+                        } else {
+                            statusColor = 'bg-red-500'; // Merah: Profil belum lengkap atau tidak ada
+                            statusTooltip = 'Profil dan Riwayat Kosong';
+                        }
+
+                        // Ambil data dari sumber yang benar dengan fallback yang aman.
+                        const email = user.biodata?.email || 'Email tidak tersedia';
+                        const userId = user.health_results?.[0]?.user_id || user.biodata?.user_id || 'N/A';
+                        // Role tidak ada di JSON, jadi kita set default 'user' jika ada biodata.
+                        const role = hasProfile ? 'user' : 'N/A';
+                        const initial = email.charAt(0).toUpperCase();
+                        
+                        // Pastikan kartu HTML dibuat untuk SETIAP pengguna.
                         contentHtml += `
-                            <button data-user-id="${user.id}" class="user-card-btn text-left block bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-t-4 border-emerald-400 hover-lift">
+                            <button data-user-id="${userId}" class="user-card-btn text-left block bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-t-4 border-emerald-400 hover-lift relative">
+                                <div title="${statusTooltip}" class="absolute top-4 right-4 w-3 h-3 ${statusColor} rounded-full border-2 border-white shadow-sm"></div>
                                 <div class="flex items-center space-x-4">
                                     <div class="flex-shrink-0 w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white text-xl font-bold">${initial}</div>
                                     <div class="min-w-0">
-                                        <p class="text-base font-bold text-slate-800 truncate" title="${user.email}">${user.email}</p>
-                                        <p class="text-sm text-slate-500">ID: ${user.id}</p>
-                                        <p class="text-xs text-slate-400 mt-1">Peran: <span class="font-semibold">${user.role}</span></p>
+                                        <p class="text-base font-bold text-slate-800 truncate" title="${email}">${email}</p>
+                                        <p class="text-sm text-slate-500">ID: ${userId}</p>
+                                        <p class="text-xs text-slate-400 mt-1">Peran: <span class="font-semibold">${role}</span></p>
                                     </div>
                                 </div>
                             </button>`;
