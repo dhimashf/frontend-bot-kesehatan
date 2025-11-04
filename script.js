@@ -106,31 +106,51 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     if (userProfileResponse.ok) {
-                        const user = await userProfileResponse.json();
-                        if (user.role === 'admin') {
-                            window.location.href = '/admin'; // Arahkan admin ke dasbor admin
-                        } else {
-                            // Untuk pengguna biasa, periksa apakah profil mereka sudah lengkap
-                            const profileStatusResponse = await fetch(`${API_BASE_URL}/users/profile/status`, { 
-                                headers: { 'Authorization': `Bearer ${data.access_token}` } 
-                            });
+    const user = await userProfileResponse.json();
+    if (user.role === 'admin') {
+        window.location.href = '/admin';
+    } else {
+        try {
+            const profileStatusResponse = await fetch(`${API_BASE_URL}/users/profile/status`, { 
+                headers: { 'Authorization': `Bearer ${data.access_token}` } 
+            });
 
-                            if (profileStatusResponse.ok) {
-                                const profileStatus = await profileStatusResponse.json();
-                                if (profileStatus.has_identity) {
-                                    window.location.href = '/'; // Profil lengkap, arahkan ke halaman utama
-                                } else {
-                                    window.location.href = '/identity_form'; // Profil belum lengkap, arahkan ke form
-                                }
-                            } else {
-                                // Jika gagal memeriksa status, arahkan ke form sebagai fallback
-                                window.location.href = '/identity_form';
-                            }
-                        }
-                    } else {
-                        // Jika gagal mendapatkan profil setelah login, arahkan ke halaman utama sebagai fallback
+                if (profileStatusResponse.ok) {
+                    const profileStatus = await profileStatusResponse.json();
+                    
+                    // Beberapa opsi pengecekan yang mungkin:
+                    
+                    // Opsi 1: Cek hanya biodata_completed
+                    if (profileStatus.biodata_completed) {
                         window.location.href = '/';
+                        return;
                     }
+                    
+                    // Opsi 2: Cek dengan logika yang lebih ketat
+                    if (profileStatus.biodata_completed === true) {
+                        window.location.href = '/';
+                        return;
+                    }
+                    
+                    // Opsi 3: Debug lebih detail
+                    console.log('Biodata completed:', profileStatus.biodata_completed);
+                    console.log('Health results completed:', profileStatus.health_results_completed);
+                    
+                    // Jika tidak memenuhi kondisi di atas, arahkan ke identity form
+                    window.location.href = '/identity_form';
+                    
+                } else {
+                    console.error('Failed to fetch profile status:', profileStatusResponse.status);
+                    window.location.href = '/identity_form';
+                }
+            } catch (error) {
+                console.error('Error checking profile status:', error);
+                window.location.href = '/identity_form';
+            }
+        }
+    } else {
+        window.location.href = '/';
+    }
                 } else {
                     let errorMsg = 'Login failed. Please check your credentials.';
                     try {
@@ -345,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const status = await response.json();
 
-            if (!status.has_identity) {
+            if (!status.biodata_completed) {
                 window.location.href = '/identity_form';
             } else {
                 // Tampilkan layar untuk memulai kuesioner
