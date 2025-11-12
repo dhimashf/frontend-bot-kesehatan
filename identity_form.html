@@ -243,7 +243,8 @@
                 </div>
                 <div>
                     <label for="no_wa" class="block text-slate-700 text-sm font-medium mb-1">3. No Kontak (WA) *</label>
-                    <input type="tel" id="no_wa" name="no_wa" required class="input-field">
+                <input type="tel" id="no_wa" name="no_wa" required class="input-field" inputmode="tel" pattern="^(\+62|0)[0-9]{8,13}$"
+                    title="Masukkan nomor telepon valid, mulai dengan 0 atau +62. Contoh: 081234567890 atau +6281234567890" maxlength="15" placeholder="081234567890" />
                 </div>
             </div>
 

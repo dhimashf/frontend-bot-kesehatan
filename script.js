@@ -261,6 +261,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const formData = new FormData(identityForm);
             const data = Object.fromEntries(formData.entries());
 
+            // --- Client-side validation for phone number (no letters, valid local format)
+            if (data.no_wa) {
+                // Normalize by removing spaces and dashes
+                const normalized = String(data.no_wa).replace(/[^+0-9]/g, '');
+                data.no_wa = normalized;
+                const phoneRe = /^(\+62|0)\d{8,13}$/;
+                if (!phoneRe.test(data.no_wa)) {
+                    errorMessage.textContent = 'Nomor telepon tidak valid. Gunakan angka, mulai dengan 0 atau +62. Contoh: 08123456789 atau +628123456789';
+                    errorMessage.classList.remove('hidden');
+                    return;
+                }
+            }
+
             // Pre-process data: convert empty strings to null for optional fields
             // and ensure integer fields are parsed correctly.
             for (const key in data) {
@@ -621,21 +634,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Panggil kedua endpoint secara bersamaan menggunakan Promise.all
+            // Ensure userId is safely encoded to avoid malformed URLs (e.g. "20:1")
+            const safeUserId = encodeURIComponent(String(userId));
             const [profileResponse, resultsResponse] = await Promise.all([
-                fetch(`${API_BASE_URL}/users/admin/profile/${userId}`, {
+                fetch(`${API_BASE_URL}/users/admin/profile/${safeUserId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 }),
-                fetch(`${API_BASE_URL}/users/admin/health-results/${userId}`, {
+                fetch(`${API_BASE_URL}/users/admin/health-results/${safeUserId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
             ]);
 
             // Periksa apakah kedua panggilan berhasil
             if (!profileResponse.ok) {
-                throw new Error(`Gagal memuat profil: ${profileResponse.statusText}`);
+                const text = await profileResponse.text().catch(() => profileResponse.statusText);
+                throw new Error(`Gagal memuat profil: ${profileResponse.status} ${text}`);
             }
             if (!resultsResponse.ok) {
-                throw new Error(`Gagal memuat riwayat: ${resultsResponse.statusText}`);
+                const text = await resultsResponse.text().catch(() => resultsResponse.statusText);
+                throw new Error(`Gagal memuat riwayat: ${resultsResponse.status} ${text}`);
             }
 
             const profileData = await profileResponse.json();
