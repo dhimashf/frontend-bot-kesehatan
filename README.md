@@ -97,3 +97,20 @@ Proyek ini sudah siap untuk di-deploy ke Vercel.
 4.  **Deploy**: Jalankan proses deployment. Setelah selesai, frontend Anda akan aktif dan terhubung dengan backend.
 
 ---
+
+## 🔐 Backend Login (Important)
+
+Catatan penting untuk tim frontend: endpoint login backend (`/api/v1/web-auth/login`) mengharapkan data form-encoded (sesuai OAuth2PasswordRequestForm).
+
+- Jangan mengirim JSON untuk permintaan login.
+- Gunakan salah satu dari:
+  - `application/x-www-form-urlencoded` (disarankan)
+  - `multipart/form-data` (hanya jika perlu untuk file atau form khusus)
+
+Contoh body (x-www-form-urlencoded):
+
+```
+username=user@example.com&password=secret
+```
+
+Di `script.js` kami sudah mengirimkan body menggunakan `URLSearchParams` dan header `Content-Type: application/x-www-form-urlencoded`.

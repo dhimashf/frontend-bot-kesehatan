@@ -31,35 +31,65 @@ document.addEventListener('DOMContentLoaded', () => {
     // Token check for protected pages
     const path = window.location.pathname;
     const isAuthPage = path === '/login' || path === '/register';
-    
-    // --- AUTHENTICATION DISABLED FOR DEVELOPMENT ---
-    // Bagian ini dinonaktifkan agar bisa melihat halaman internal tanpa login.
-    // Aktifkan kembali untuk mode produksi.
+
     // Tangani callback Google Auth SEBELUM melakukan pengecekan token lainnya.
     // Fungsi ini akan me-reload halaman jika menemukan token di URL.
     const handled = handleGoogleAuthCallback();
-    
-    // Hanya jalankan pengecekan token jika BUKAN halaman auth DAN callback Google tidak sedang ditangani.
-    if (!isAuthPage && !handled) { 
-        // Jika tidak ada token di localStorage, arahkan ke login.
-        if (!token) { 
-            window.location.href = '/login';
-            return; // Hentikan eksekusi jika tidak ada token
-        }
-        fetchUserProfile(); // Jika ada token, ambil profil pengguna.
-    }
 
-    // Jalankan logika spesifik berdasarkan halaman yang sedang aktif
-    if (path === '/profile') {
-        renderProfilePage(); // Render data profil dan riwayat
-    } else if (path === '/identity_form') {
-        // Event listener untuk form identitas sudah ada di bawah
-        fetchUserProfile();
-    } else if (path === '/admin') {
-        // Isi email pengguna saat form dimuat
-        fetchUserProfile();
-    } else if (loginForm) {
-        // Event listener untuk form login sudah ada di bawah
+    // --- LOGIKA ROUTING & GUARD ---
+    // Kita menggunakan pendekatan show/hide pada container halaman agar
+    // tidak terjadi masalah history/redirect yang tidak diinginkan.
+
+    // Asumsikan container berikut ada di HTML. Jika tidak ada, code akan
+    // tetap aman karena kita menggunakan optional chaining (?.).
+    const pageHome = document.getElementById('initial-screen');
+    const pageLogin = document.getElementById('login-page');
+    const pageRegister = document.getElementById('register-page');
+    const pageProfile = document.getElementById('profile-page');
+    const pageIdentityForm = document.getElementById('identity-form-page');
+    const pageAdmin = document.getElementById('admin-page');
+
+    // Sembunyikan semua halaman terlebih dahulu (aman jika elemen tidak ada)
+    [pageHome, pageLogin, pageRegister, pageProfile, pageIdentityForm, pageAdmin].forEach(p => p?.classList.add('hidden'));
+
+    if (isAuthPage) {
+        // Halaman Login / Register
+        if (token) {
+            // Jika sudah login, jangan biarkan pengguna tetap di halaman auth.
+            // Gunakan replace supaya tidak menyimpan history ke login.
+            window.location.replace('/');
+        } else {
+            // Tampilkan container sesuai path (jika ada)
+            if (path === '/login') pageLogin?.classList.remove('hidden');
+            else if (path === '/register') pageRegister?.classList.remove('hidden');
+        }
+    } else if (!handled) {
+        // Halaman yang dilindungi (bukan login/register)
+        if (!token) {
+            // Paksa ke login tanpa menyimpan history
+            window.location.replace('/login');
+        } else {
+            // Tampilkan halaman sesuai path dan jalankan logika spesifik
+            if (path === '/') {
+                pageHome?.classList.remove('hidden');
+                fetchUserProfile();
+                checkProfileStatus();
+            } else if (path === '/profile') {
+                pageProfile?.classList.remove('hidden');
+                renderProfilePage();
+            } else if (path === '/identity_form') {
+                pageIdentityForm?.classList.remove('hidden');
+                fetchUserProfile();
+            } else if (path === '/admin') {
+                pageAdmin?.classList.remove('hidden');
+                fetchUserProfile();
+            } else {
+                // Fallback: jika path tidak dikenali, tampilkan beranda
+                pageHome?.classList.remove('hidden');
+                fetchUserProfile();
+                checkProfileStatus();
+            }
+        }
     }
 
     // --- Logika untuk Sidebar Responsif ---
@@ -154,12 +184,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     let errorMsg = 'Login failed. Please check your credentials.';
                     try {
-                        // Coba parse error dari backend, jika ada
-                        const errorData = await response.json();
-                        errorMsg = errorData.detail || errorMsg;
+                        // Check content-type before parsing. If it's not JSON, don't parse.
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.indexOf("application/json") !== -1) {
+                            const errorData = await response.json();
+                            errorMsg = errorData.detail || errorMsg;
+                        } else {
+                            // If not JSON, use the status text from the server, which can be more descriptive.
+                            errorMsg = response.statusText || errorMsg;
+                        }
                     } catch (e) {
-                        // Jika response bukan JSON, tampilkan pesan umum
-                        console.error("Could not parse error response:", e);
+                        console.error("Error processing the login failure response:", e);
                     }
                     errorMessage.textContent = errorMsg;
                     errorMessage.classList.remove('hidden');
@@ -1261,8 +1296,14 @@ document.addEventListener('DOMContentLoaded', () => {
         options.forEach(opt => {
             const button = document.createElement('button');
             button.className = "bg-emerald-100 text-emerald-800 font-medium py-2 px-4 rounded-lg hover:bg-emerald-200 transition duration-150 m-1";
-            button.textContent = `${opt.text} (${opt.score})`;
+            // Remove trailing parenthesized numeric score if present (e.g. "Setiap Saat (6)")
+            const rawText = String(opt.text || '');
+            const displayText = rawText.replace(/\s*\(\d+\)\s*$/, '').trim();
+            button.textContent = displayText || rawText;
+            // keep numeric score for calculation
             button.dataset.score = opt.score;
+            // put the original label in title for debugging/QA if needed
+            button.title = rawText;
             button.addEventListener('click', handleOptionClick);
             quizFooter.appendChild(button);
         });
@@ -1341,13 +1382,79 @@ document.addEventListener('DOMContentLoaded', () => {
             const resultSummary = await response.json();
             statusMessage.classList.add('hidden');
             
-            // Tampilkan ringkasan hasil
-            let summaryText = '✨ Kuesioner Selesai! Berikut adalah ringkasan hasilnya:\n\n';
+            // Tampilkan ringkasan hasil dengan format yang lebih baik (mirip Telegram)
+            let summaryHtml = `
+                <div class="survey-results-container bg-gradient-to-b from-emerald-50 to-blue-50 p-6 rounded-lg border-2 border-emerald-300 max-w-2xl">
+                    <h2 class="text-2xl font-bold text-emerald-700 mb-6">✨ Survey Selesai!</h2>
+                    <div class="space-y-4">
+            `;
+            
+            // Iterasi melalui setiap hasil kuesioner
             for (const [key, value] of Object.entries(resultSummary.summary)) {
-                summaryText += `*${key}*\nSkor: ${value.score}\nKategori: ${value.interpretation}\n\n`;
+                // Pilih warna berdasarkan kategori / kuesioner
+                let borderColor = 'border-emerald-400';
+                let bgColor = 'bg-gradient-to-r from-emerald-50 to-green-50';
+                let titleColor = 'text-emerald-700';
+                
+                if (key.includes('WHO-5') || key.includes('Well')) {
+                    borderColor = 'border-emerald-400';
+                    bgColor = 'bg-gradient-to-r from-emerald-50 to-green-50';
+                    titleColor = 'text-emerald-700';
+                } else if (key.includes('GAD') || key.includes('Anxiety')) {
+                    borderColor = 'border-blue-400';
+                    bgColor = 'bg-gradient-to-r from-blue-50 to-cyan-50';
+                    titleColor = 'text-blue-700';
+                } else if (key.includes('K10') || key.includes('Kessler')) {
+                    borderColor = 'border-purple-400';
+                    bgColor = 'bg-gradient-to-r from-purple-50 to-violet-50';
+                    titleColor = 'text-purple-700';
+                } else if (key.includes('MBI') || key.includes('Burnout')) {
+                    borderColor = 'border-orange-400';
+                    bgColor = 'bg-gradient-to-r from-orange-50 to-amber-50';
+                    titleColor = 'text-orange-700';
+                } else if (key.includes('NAQ') || key.includes('Perundungan')) {
+                    borderColor = 'border-red-400';
+                    bgColor = 'bg-gradient-to-r from-red-50 to-rose-50';
+                    titleColor = 'text-red-700';
+                }
+                
+                // Tentukan badge kategori berdasarkan interpretasi
+                let categoryBadgeClass = 'bg-gray-100 text-gray-700';
+                const interpretation = value.interpretation || '';
+                if (interpretation.includes('Tinggi') || interpretation.includes('Berat') || interpretation.includes('Sangat')) {
+                    categoryBadgeClass = 'bg-red-100 text-red-700 font-bold';
+                } else if (interpretation.includes('Sedang')) {
+                    categoryBadgeClass = 'bg-yellow-100 text-yellow-700 font-bold';
+                } else if (interpretation.includes('Ringan') || interpretation.includes('Minimal') || interpretation.includes('Rendah')) {
+                    categoryBadgeClass = 'bg-green-100 text-green-700 font-bold';
+                }
+                
+                summaryHtml += `
+                    <div class="${bgColor} ${borderColor} border-l-4 p-4 rounded-lg">
+                        <p class="${titleColor} font-bold text-lg mb-3">${key}</p>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-gray-700 font-semibold">Skor:</span>
+                            <span class="text-xl font-bold text-gray-800">${value.score}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 font-semibold">Kategori:</span>
+                            <span class="px-3 py-1 rounded-full text-sm font-bold ${categoryBadgeClass}">${interpretation}</span>
+                        </div>
+                    </div>
+                `;
             }
-            summaryText += 'Anda sekarang dapat memulai percakapan dengan asisten.';
-            addMessageToChat('bot', summaryText.replace(/\n/g, '<br>'));
+            
+            summaryHtml += `
+                    </div>
+                    <div class="mt-6 pt-4 border-t-2 border-emerald-300">
+                        <p class="text-center text-emerald-700 font-semibold text-lg">
+                            🎯 Anda sekarang dapat memulai percakapan dengan asisten kesehatan mental kami.
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            addMessageToChat('bot', summaryHtml);
 
             // Reset state untuk chat berikutnya
             questionnaireState = { current: null, scores: {}, currentQuestionIndex: 0 };
