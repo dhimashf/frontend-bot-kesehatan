@@ -11,7 +11,7 @@
     <style>
         body { 
             font-family: 'Poppins', sans-serif; 
-            scroll-behavior: smooth;
+            scroll-behavior: smooth; 
         }
         
         /* Updated background gradient to match dashboard */
@@ -100,11 +100,10 @@
         .sidebar-gradient {
             background: linear-gradient(180deg, #065f46 0%, #047857 50%, #059669 100%);
             position: relative;
-            overflow: hidden;
-            height: 100vh; /* Full viewport height */
-            position: fixed; /* Fixed position */
-            left: 0;
-            top: 0;
+            overflow: hidden; /* Removed fixed positioning for better flexbox layout */
+            /* height: 100vh; */ /* Let flexbox handle the height */
+            /* position: fixed; */
+            /* left: 0; top: 0; */
             z-index: 40;
             display: flex;
             flex-direction: column;
@@ -226,62 +225,20 @@
 
         /* Main content area with independent scrolling */
         .main-content {
-            margin-left: 16rem; /* Match sidebar width */
-            min-height: 100vh;
-            position: relative;
-            z-index: 10;
+            flex: 1; /* Allow main content to take remaining space */
+            position: relative; 
+            overflow-y: auto; /* Enable scrolling for the main content area */
         }
 
         /* Mobile sidebar adjustments */
         @media (max-width: 768px) {
             .sidebar-gradient {
+                position: fixed;
+                inset-y: 0;
+                left: 0;
                 transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
             }
-            
-            .sidebar-gradient.mobile-open {
-                transform: translateX(0);
-            }
-            
-            .main-content {
-                margin-left: 0;
-            }
-            
-            .main-content.sidebar-open {
-                margin-left: 0;
-            }
-        }
-
-        /* Ensure content is properly spaced */
-        .content-wrapper {
-            padding: 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* Scrollable area for main content */
-        .scrollable-content {
-            height: calc(100vh - 2rem);
-            overflow-y: auto;
-            padding-right: 0.5rem;
-        }
-
-        /* Custom scrollbar styling */
-        .scrollable-content::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .scrollable-content::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 3px;
-        }
-
-        .scrollable-content::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 3px;
-        }
-
-        .scrollable-content::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
         }
 
         /* Sidebar content layout */
@@ -309,9 +266,9 @@
     <div id="profile-shape-2" class="floating-shape"></div>
     <div id="profile-shape-3" class="floating-shape"></div>
 
-    <div class="relative min-h-screen">
+    <div class="relative min-h-screen md:flex">
         <!-- Sidebar with green gradient to match dashboard -->
-        <aside id="sidebar" class="w-64 sidebar-gradient text-white p-6 transition-transform duration-300 ease-in-out z-40">
+        <aside id="sidebar" class="w-64 sidebar-gradient text-white flex-col p-6 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 md:flex transition-transform duration-300 ease-in-out z-30">
             <div class="sidebar-content">
                 <!-- Top section - Profile and Navigation -->
                 <div class="sidebar-top">
@@ -348,10 +305,9 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="main-content">
-            <div class="content-wrapper">
-                <div class="scrollable-content">
-                    <!-- Enhanced header with gradient text -->
+        <main class="main-content p-4 sm:p-6 lg:p-10">
+            <div class="max-w-7xl mx-auto">
+                 <!-- Enhanced header with gradient text -->
                     <div class="mb-8">
                         <div class="flex items-center gap-4">
                             <button id="menu-button" aria-label="Buka menu" class="md:hidden text-slate-600 hover:text-slate-800 bg-white p-2 rounded-lg shadow-sm">
@@ -463,8 +419,7 @@
                         <a href="/" class="inline-block bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-2 px-6 rounded-lg transition-smooth hover-lift shadow-md">
                             📋 Mulai Kuesioner Sekarang
                         </a>
-                    </div>
-                </div>
+                    </div> 
             </div>
         </main>
     </div>
@@ -490,28 +445,26 @@
             const menuButton = document.getElementById('menu-button');
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.querySelector('.main-content');
-
+    
             if (menuButton && sidebar) {
                 menuButton.addEventListener('click', function() {
-                    sidebar.classList.toggle('mobile-open');
-                    mainContent.classList.toggle('sidebar-open');
+                    sidebar.classList.toggle('-translate-x-full');
                 });
-
+    
                 // Close sidebar when clicking outside on mobile
                 document.addEventListener('click', function(event) {
-                    if (window.innerWidth <= 768) {
-                        const isClickInsideSidebar = sidebar.contains(event.target);
-                        const isClickOnMenuButton = menuButton.contains(event.target);
-                        
-                        if (!isClickInsideSidebar && !isClickOnMenuButton && sidebar.classList.contains('mobile-open')) {
-                            sidebar.classList.remove('mobile-open');
-                            mainContent.classList.remove('sidebar-open');
-                        }
+                    const isClickInsideSidebar = sidebar.contains(event.target);
+                    const isClickOnMenuButton = menuButton.contains(event.target);
+    
+                    // This condition now correctly checks if the sidebar is open on mobile
+                    // and if the click is outside both the sidebar and the menu button.
+                    if (!isClickInsideSidebar && !isClickOnMenuButton && !sidebar.classList.contains('-translate-x-full')) {
+                        sidebar.classList.add('-translate-x-full');
                     }
                 });
             }
-
-            // Close sidebar when window is resized to desktop
+    
+            // This logic is no longer needed with the new CSS structure
             window.addEventListener('resize', function() {
                 if (window.innerWidth > 768) {
                     sidebar.classList.remove('mobile-open');
