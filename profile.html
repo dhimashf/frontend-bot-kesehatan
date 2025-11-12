@@ -266,7 +266,7 @@
     <div id="profile-shape-2" class="floating-shape"></div>
     <div id="profile-shape-3" class="floating-shape"></div>
 
-    <div class="relative min-h-screen md:flex">
+    <div class="relative h-screen md:flex">
         <!-- Sidebar with green gradient to match dashboard -->
         <aside id="sidebar" class="w-64 sidebar-gradient text-white flex-col p-6 fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 md:flex transition-transform duration-300 ease-in-out z-30">
             <div class="sidebar-content">
@@ -305,8 +305,9 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="main-content p-4 sm:p-6 lg:p-10">
-            <div class="max-w-7xl mx-auto">
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10">
+                <div class="max-w-7xl mx-auto">
                  <!-- Enhanced header with gradient text -->
                     <div class="mb-8">
                         <div class="flex items-center gap-4">
@@ -419,7 +420,8 @@
                         <a href="/" class="inline-block bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-2 px-6 rounded-lg transition-smooth hover-lift shadow-md">
                             📋 Mulai Kuesioner Sekarang
                         </a>
-                    </div> 
+                    </div>
+                </div>
             </div>
         </main>
     </div>
