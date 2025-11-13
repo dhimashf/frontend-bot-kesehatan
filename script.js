@@ -339,26 +339,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Logic for disabling pregnancy status based on gender ---
         const genderRadios = document.querySelectorAll('input[name="jenis_kelamin"]');
-        const pregnancyGroup = document.getElementById('is_pregnant-group');
-        const pregnancyRadios = pregnancyGroup?.querySelectorAll('input[name="status_kehamilan"]');
-        const pregnancyRadioNo = pregnancyGroup?.querySelector('input[value="Tidak"]');
+
 
         function handleGenderChange() {
-            const selectedGender = document.querySelector('input[name="jenis_kelamin"]:checked')?.value;
-
-            if (selectedGender === 'Laki-laki') {
-                // Jika laki-laki, nonaktifkan dan set ke "Tidak"
-                if (pregnancyRadioNo) pregnancyRadioNo.checked = true;
-                pregnancyRadios?.forEach(radio => radio.disabled = true);
-                pregnancyGroup?.parentElement.classList.add('opacity-50', 'cursor-not-allowed');
-            } else {
-                // Jika perempuan atau belum dipilih, aktifkan kembali
-                pregnancyRadios?.forEach(radio => {
-                    radio.disabled = false;
-                    // Jangan hapus centang jika sudah ada pilihan sebelumnya
-                });
-                pregnancyGroup?.parentElement.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
+            // Logika yang menonaktifkan status kehamilan untuk laki-laki telah dihapus
+            // untuk memungkinkan pemilihan manual dan mencegah potensi error.
+            // Anda sekarang dapat memilih "Ya" atau "Tidak" untuk semua gender.
         }
 
         // Tambahkan listener ke setiap radio button jenis kelamin
