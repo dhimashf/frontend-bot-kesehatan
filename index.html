@@ -359,21 +359,25 @@
                     <!-- Decorative shapes in background -->
                     <div id="deco-circle-main" class="decorative-shape shape-circle"></div>
                     <div id="deco-square-main" class="decorative-shape shape-square"></div>
-                    
-                    <div id="initial-screen" class="initial-screen-enhanced text-center p-8 flex flex-col justify-center h-full relative z-10">
-                        <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">Selamat Datang!</h2>
-                        <p class="text-slate-600 mb-6 max-w-md mx-auto leading-relaxed">Untuk memberikan arahan terbaik, kami akan memulai dengan kuesioner singkat untuk memahami kondisi kesejahteraan Anda.</p>
-                        <button id="start-who5" class="btn-start self-center">
-                            ✨ Mulai Kuesioner
-                        </button>
-                        <div class="wellness-quote">
-                            "Kesehatan mental yang baik adalah fondasi dari kehidupan yang bermakna dan bahagia."
-                        </div>
-                    </div>
                     <div id="chat-output" class="hidden h-full overflow-y-auto space-y-4"></div>
                 </div>
                 
                 <p id="status-message" class="text-sm text-gray-500 p-2 text-center hidden bg-gray-100"></p>
+                
+                <!-- Chat Input Interface untuk pertanyaan teks -->
+                <div id="chat-interface" class="hidden bg-gradient-to-r from-slate-50 to-slate-100 p-4 border-t border-slate-200">
+                    <div class="flex items-end gap-2 max-w-4xl mx-auto">
+                        <textarea id="chat-input" placeholder="Ketik jawaban Anda di sini..." class="flex-grow px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none" rows="2"></textarea>
+                        <button id="send-chat-btn" class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-lg hover:shadow-lg hover:from-emerald-600 hover:to-emerald-700 transition duration-200 flex items-center justify-center shrink-0
+                                                       p-3 sm:p-0 sm:w-auto sm:px-6 sm:py-2 h-12 sm:h-auto">
+                            <!-- Teks "Kirim" hanya terlihat di layar sm (small) ke atas -->
+                            <span class="hidden sm:inline">Kirim</span>
+                            <!-- Ikon selalu terlihat, dengan margin kiri hanya di layar sm ke atas -->
+                            <svg class="w-5 h-5 sm:ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </button>
+                    </div>
+                </div>
+                
                 <footer id="quiz-footer" class="p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-b-2xl shadow-inner flex justify-center flex-wrap gap-2"></footer>
             </div>
         </main>

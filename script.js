@@ -14,13 +14,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusMessage = document.getElementById('status-message');
     const resetButton = document.getElementById('reset-button');
     const menuButton = document.getElementById('menu-button');
+    const chatInput = document.getElementById('chat-input');
+    const sendChatButton = document.getElementById('send-chat-btn');
     const sidebar = document.getElementById('sidebar');
 
     // --- State Aplikasi ---
     let questionnaireState = {
         current: null, // 'who5', 'gad7', 'mbi', 'naqr', 'k10'
         scores: {},
-        currentQuestionIndex: 0
+        currentQuestionIndex: 0,
+        isTextInputMode: false // Flag untuk menandai mode input teks
     };
 
     // Mengatur base URL API untuk selalu menggunakan path relatif.
@@ -147,27 +150,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (profileStatusResponse.ok) {
                     const profileStatus = await profileStatusResponse.json();
-                    
-                    // Beberapa opsi pengecekan yang mungkin:
-                    
-                    // Opsi 1: Cek hanya biodata_completed
-                    if (profileStatus.biodata_completed) {
-                        window.location.href = '/';
-                        return;
-                    }
-                    
-                    // Opsi 2: Cek dengan logika yang lebih ketat
+                    // Jika biodata sudah lengkap, arahkan ke halaman utama.
+                    // Jika tidak, paksa pengguna untuk mengisi formulir identitas.
                     if (profileStatus.biodata_completed === true) {
                         window.location.href = '/';
-                        return;
+                    } else {
+                        window.location.href = '/identity_form';
                     }
-                    
-                    // Opsi 3: Debug lebih detail
-                    console.log('Biodata completed:', profileStatus.biodata_completed);
-                    console.log('Health results completed:', profileStatus.health_results_completed);
-                    
-                    // Jika tidak memenuhi kondisi di atas, arahkan ke identity form
-                    window.location.href = '/identity_form';
                     
                 } else {
                     console.error('Failed to fetch profile status:', profileStatusResponse.status);
@@ -182,25 +171,25 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '/';
     }
                 } else {
-                    let errorMsg = 'Login failed. Please check your credentials.';
+                    const defaultErrorMsg = 'Login failed. Please check your credentials.';
                     try {
                         // Check content-type before parsing. If it's not JSON, don't parse.
                         const contentType = response.headers.get("content-type");
                         if (contentType && contentType.indexOf("application/json") !== -1) {
                             const errorData = await response.json();
-                            errorMsg = errorData.detail || errorMsg;
+                            errorMessage.textContent = errorData.detail || defaultErrorMsg;
                         } else {
                             // If not JSON, use the status text from the server, which can be more descriptive.
-                            errorMsg = response.statusText || errorMsg;
+                            errorMessage.textContent = response.statusText || defaultErrorMsg;
                         }
                     } catch (e) {
                         console.error("Error processing the login failure response:", e);
+                        errorMessage.textContent = defaultErrorMsg;
                     }
-                    errorMessage.textContent = errorMsg;
                     errorMessage.classList.remove('hidden');
                 }
             } catch (error) {
-                errorMessage.textContent = 'An unexpected network error occurred. Please try again.';
+                errorMessage.textContent = 'Terjadi kesalahan jaringan. Silakan coba lagi.';
                 errorMessage.classList.remove('hidden');
             }
         });
@@ -431,14 +420,43 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const status = await response.json();
 
+            // Ambil elemen UI untuk chat
+            const chatInterface = document.getElementById('chat-interface');
+
             if (!status.biodata_completed) {
+                if (chatInterface) chatInterface.classList.add('hidden');
                 window.location.href = '/identity_form';
             } else {
-                // Tampilkan layar untuk memulai kuesioner
-                // Ini akan selalu ditampilkan jika identitas sudah lengkap,
-                // memungkinkan pengguna untuk mengisi ulang.
-                initialScreen.classList.remove('hidden');
+                // Jika biodata sudah lengkap, selalu aktifkan mode chat di halaman utama.
+                if (initialScreen) initialScreen.classList.add('hidden'); // Sembunyikan layar "Mulai" awal
+                chatOutput.classList.remove('hidden');
+                if (chatInterface) chatInterface.classList.remove('hidden');
+
+                // Tambahkan pesan sambutan jika chat masih kosong
+                if (chatOutput.children.length === 0) {
+                    // --- MODIFIKASI UNTUK LAYAR SAMBUTAN ---
+                    // Alih-alih menggunakan addMessageToChat yang membuat gelembung chat,
+                    // kita akan menyisipkan HTML ini langsung ke dalam chatOutput
+                    // dan menambahkan kelas yang diperlukan agar memenuhi kontainer.
+                    chatOutput.innerHTML = `
+                        <div class="initial-screen-enhanced text-center p-8 flex flex-col justify-center h-full relative z-10 flex-grow w-full">
+                            <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">Selamat Datang!</h2>
+                            <p class="text-slate-600 mb-6 max-w-md mx-auto leading-relaxed">Untuk memberikan arahan terbaik, kami akan memulai dengan kuesioner singkat untuk memahami kondisi kesejahteraan Anda.</p>
+                            <button id="start-questionnaire-from-chat" class="btn-start self-center">
+                                ✨ Mulai Kuesioner
+                            </button>
+                            <div class="wellness-quote mt-6">
+                                "Kesehatan mental yang baik adalah fondasi dari kehidupan yang bermakna dan bahagia."
+                            </div>
+                        </div>`;
+                    
+                    // Tambahkan kelas pada #chat-output agar konten di dalamnya bisa di-center dan memenuhi tinggi.
+                    chatOutput.classList.add('flex', 'flex-col', 'items-center', 'justify-center');
+
+                    document.getElementById('start-questionnaire-from-chat')?.addEventListener('click', () => startQuestionnaire('who5'));
+                }
             }
+
         } catch (error) {
             console.error('Error checking profile status:', error);
             // Jika ada error, mungkin token tidak valid
@@ -730,9 +748,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Header untuk CSV (sama seperti unduhan per pengguna)
             const headers = [
                 'User ID', 'Email', 'Inisial', 'Usia', 'Jenis Kelamin', 'Pendidikan', 'Lama Bekerja (Tahun)', 'Status Pegawai', 'Jabatan', 'Unit/Ruangan', 'Status Perkawinan', 'Status Kehamilan', 'Jumlah Anak',
-                'ID Hasil', 'Tanggal Pengisian',
-                'WHO-5 Skor', 'WHO-5 Kategori', 'GAD-7 Skor', 'GAD-7 Kategori', 'K10 Skor', 'K10 Kategori',
+                'ID Hasil', 'Tanggal Pengisian', 'WHO-5 Skor', 'WHO-5 Kategori', 'GAD-7 Skor', 'GAD-7 Kategori', 'K10 Skor', 'K10 Kategori',
                 'MBI Kelelahan Emosional Skor', 'MBI Kelelahan Emosional Kategori', 'MBI Sikap Sinis Skor', 'MBI Sikap Sinis Kategori', 'MBI Pencapaian Pribadi Skor', 'MBI Pencapaian Pribadi Kategori', 'MBI Total Skor', 'MBI Total Kategori',
+                'NAQ-R Pengalaman Perundungan', 'NAQ-R Pelaku Perundungan', 'NAQ-R Detail Pelaku',
                 'NAQ-R Perundungan Pribadi Skor', 'NAQ-R Perundungan Pekerjaan Skor', 'NAQ-R Intimidasi Skor', 'NAQ-R Total Skor', 'NAQ-R Kategori'
             ];
 
@@ -753,10 +771,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const naqrTotalScore = result.naqr_pribadi_total + result.naqr_pekerjaan_total + result.naqr_intimidasi_total;
 
                         const row = [
-                            biodata.user_id, biodata.email, biodata.inisial, biodata.usia, biodata.jenis_kelamin, biodata.pendidikan, biodata.lama_bekerja, biodata.status_pegawai, biodata.jabatan_lain || biodata.jabatan, biodata.unit_ruangan, biodata.status_perkawinan, biodata.status_kehamilan, biodata.jumlah_anak,
-                            result.id, date,
-                            result.who5_total, getWho5Category(result.who5_total), result.gad7_total, getGad7Category(result.gad7_total), result.k10_total, getK10Category(result.k10_total),
+                            biodata.user_id, biodata.email, biodata.inisial, biodata.usia, biodata.jenis_kelamin, biodata.pendidikan, biodata.lama_bekerja, biodata.status_pegawai, biodata.jabatan_lain || biodata.jabatan, biodata.unit_ruangan, biodata.status_perkawinan, biodata.status_kehamilan, biodata.jumlah_anak, // NOSONAR
+                            result.id, date, result.who5_total, getWho5Category(result.who5_total), result.gad7_total, getGad7Category(result.gad7_total), result.k10_total, getK10Category(result.k10_total),
                             result.mbi_emosional_total, getMbiSubscaleCategory(result.mbi_emosional_total, 'emosional'), result.mbi_sinis_total, getMbiSubscaleCategory(result.mbi_sinis_total, 'sinis'), result.mbi_pencapaian_total, getMbiSubscaleCategory(result.mbi_pencapaian_total, 'pencapaian'), mbiTotalScore, getMbiTotalCategory(mbiTotalScore),
+                            getNaqrBullyingExperienceText(result.naqr_bullying_experience), result.naqr_bullying_actors, result.naqr_bullying_perpetrators_detail,
                             result.naqr_pribadi_total, result.naqr_pekerjaan_total, result.naqr_intimidasi_total, naqrTotalScore, getNaqrCategory(naqrTotalScore)
                         ].map(sanitize);
                         csvContent += row.join(',') + '\r\n';
@@ -797,14 +815,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Header untuk CSV
         const headers = [
             'User ID', 'Email', 'Inisial', 'Usia', 'Jenis Kelamin', 'Pendidikan', 'Lama Bekerja (Tahun)', 'Status Pegawai', 'Jabatan', 'Unit/Ruangan', 'Status Perkawinan', 'Status Kehamilan', 'Jumlah Anak',
-            'ID Hasil', 'Tanggal Pengisian',
-            'WHO-5 Skor', 'WHO-5 Kategori',
-            'GAD-7 Skor', 'GAD-7 Kategori',
-            'K10 Skor', 'K10 Kategori',
+            'ID Hasil', 'Tanggal Pengisian', 'WHO-5 Skor', 'WHO-5 Kategori', 'GAD-7 Skor', 'GAD-7 Kategori', 'K10 Skor', 'K10 Kategori',
             'MBI Kelelahan Emosional Skor', 'MBI Kelelahan Emosional Kategori',
             'MBI Sikap Sinis Skor', 'MBI Sikap Sinis Kategori',
             'MBI Pencapaian Pribadi Skor', 'MBI Pencapaian Pribadi Kategori',
             'MBI Total Skor', 'MBI Total Kategori',
+            'NAQ-R Pengalaman Perundungan', 'NAQ-R Pelaku Perundungan', 'NAQ-R Detail Pelaku',
             'NAQ-R Perundungan Pribadi Skor', 'NAQ-R Perundungan Pekerjaan Skor', 'NAQ-R Intimidasi Skor',
             'NAQ-R Total Skor', 'NAQ-R Kategori'
         ];
@@ -828,15 +844,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const naqrTotalScore = result.naqr_pribadi_total + result.naqr_pekerjaan_total + result.naqr_intimidasi_total;
 
             const row = [
-                biodata.user_id, biodata.email, biodata.inisial, biodata.usia, biodata.jenis_kelamin, biodata.pendidikan, biodata.lama_bekerja, biodata.status_pegawai, biodata.jabatan_lain || biodata.jabatan, biodata.unit_ruangan, biodata.status_perkawinan, biodata.status_kehamilan, biodata.jumlah_anak,
-                result.id, date,
-                result.who5_total, getWho5Category(result.who5_total),
+                biodata.user_id, biodata.email, biodata.inisial, biodata.usia, biodata.jenis_kelamin, biodata.pendidikan, biodata.lama_bekerja, biodata.status_pegawai, biodata.jabatan_lain || biodata.jabatan, biodata.unit_ruangan, biodata.status_perkawinan, biodata.status_kehamilan, biodata.jumlah_anak, // NOSONAR
+                result.id, date, result.who5_total, getWho5Category(result.who5_total),
                 result.gad7_total, getGad7Category(result.gad7_total),
                 result.k10_total, getK10Category(result.k10_total),
                 result.mbi_emosional_total, getMbiSubscaleCategory(result.mbi_emosional_total, 'emosional'),
                 result.mbi_sinis_total, getMbiSubscaleCategory(result.mbi_sinis_total, 'sinis'),
                 result.mbi_pencapaian_total, getMbiSubscaleCategory(result.mbi_pencapaian_total, 'pencapaian'),
                 mbiTotalScore, getMbiTotalCategory(mbiTotalScore),
+                getNaqrBullyingExperienceText(result.naqr_bullying_experience), result.naqr_bullying_actors, result.naqr_bullying_perpetrators_detail,
                 result.naqr_pribadi_total, result.naqr_pekerjaan_total, result.naqr_intimidasi_total,
                 naqrTotalScore, getNaqrCategory(naqrTotalScore)
             ].map(sanitize);
@@ -917,9 +933,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'Sangat tinggi';
     }
 
+    function getNaqrBullyingExperienceText(value) {
+        const options = {
+            1: "Tidak",
+            2: "Ya, tapi jarang",
+            3: "Ya, kadang-kadang",
+            4: "Ya, beberapa kali per minggu",
+            5: "Ya, hampir tiap hari"
+        };
+        return options[value] || value; // Return the original value if not found
+    }
+
     function createHealthResultCardHTML(result, isAdminView = false) {
         const d = new Date(result.created_at);
-        const datePart = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        // Gunakan format yang konsisten untuk tanggal dan waktu di semua tempat.
+        // Format ini akan digunakan baik di kartu hasil baru maupun di halaman riwayat.
+        const datePart = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
         const timePart = [d.getHours(), d.getMinutes(), d.getSeconds()].map(num => String(num).padStart(2, '0')).join(':');
         const date = `${datePart}, ${timePart}`;
 
@@ -933,16 +962,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const mbiTotalScore = result.mbi_emosional_total + result.mbi_sinis_total + result.mbi_pencapaian_total;
         const mbiTotalCategory = getMbiTotalCategory(mbiTotalScore);
         // Hitung total skor NAQ-R secara manual di frontend
-        const naqrTotalScore = result.naqr_pribadi_total + result.naqr_pekerjaan_total + result.naqr_intimidasi_total;
-        const naqrCategory = getNaqrCategory(naqrTotalScore);
+        const naqrDisplayTotalScore = result.naqr_pribadi_total + result.naqr_pekerjaan_total + result.naqr_intimidasi_total;
+        // Gunakan skor total dari backend untuk kategori jika tersedia (lebih akurat),
+        // jika tidak, gunakan total yang dihitung di frontend.
+        const naqrCategory = getNaqrCategory(result.naqr_total_for_category !== undefined ? result.naqr_total_for_category : naqrDisplayTotalScore);
         const cardId = `result-card-${result.id}`;
-
-        const deleteButtonHTML = isAdminView ? '' : `
-            <button data-result-id="${result.id}" class="delete-result-btn px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors duration-200">
-                HAPUS
-            </button>
+        // Always show NAQ-R bullying details block with correct labels and values
+        const experienceText = getNaqrBullyingExperienceText(result.naqr_bullying_experience);
+        const actorsText = result.naqr_bullying_actors || '-';
+        const detailText = result.naqr_bullying_perpetrators_detail || '-';
+        let naqrBullyingDetailsHTML = `
+            <div class="mt-4 pt-3 border-t border-red-200 text-sm space-y-2 text-left">
+                <p class="font-semibold text-red-800">Detail Pengalaman Perundungan:</p>
+                <div class="grid grid-cols-2 gap-x-2"><span>Pengalaman:</span> <span class="font-medium text-right truncate">${experienceText}</span></div>
+                <div class="grid grid-cols-2 gap-x-2"><span>Pelaku:</span> <span class="font-medium text-right truncate">${actorsText}</span></div>
+                <div class="grid grid-cols-2 gap-x-2"><span>Detail Pelaku:</span> <span class="font-medium text-right truncate">${detailText}</span></div>
+            </div>
         `;
 
+
+        let deleteButtonHTML = '';
+        // Tombol hapus telah dinonaktifkan dari sisi pengguna sesuai permintaan.
+        // Variabel deleteButtonHTML akan selalu kosong.
+
+        // Order: WHO-5, GAD-7, MBI, K10, NAQ-R (with details)
         return `
             <div id="${cardId}" class="bg-white p-6 rounded-lg shadow-md border-l-4 border-emerald-500 mb-6">
                 <div class="flex justify-between items-start mb-6 pb-4 border-b border-slate-200">
@@ -957,40 +1000,43 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="flex items-center gap-2 mb-3"><div class="w-3 h-3 bg-emerald-500 rounded-full"></div><p class="font-bold text-slate-700 text-sm">WELL-BEING INDEX</p></div>
                         <div class="space-y-2 text-sm">
                             <div class="flex justify-between items-center"><span class="font-medium text-slate-600">Skor:</span><span class="font-bold text-emerald-700">${result.who5_total}/30</span></div>
-                            <div class="flex justify-between items-center"><span class="font-medium text-slate-600">Kategori:</span><span class="font-semibold text-emerald-600 px-2 py-1 bg-emerald-100 rounded-full text-xs">${who5Category}</span></div>
+                            <div class="flex justify-between items-start gap-2"><span class="font-medium text-slate-600 shrink-0">Kategori:</span><span class="font-semibold text-emerald-600 px-2 py-1 bg-emerald-100 rounded-full text-xs text-right">${who5Category}</span></div>
                         </div>
                     </div>
                     <div class="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-lg border border-blue-200">
                         <div class="flex items-center gap-2 mb-3"><div class="w-3 h-3 bg-blue-500 rounded-full"></div><p class="font-bold text-slate-700 text-sm">GAD-7 (ANXIETY)</p></div>
                         <div class="space-y-2 text-sm">
                             <div class="flex justify-between items-center"><span class="font-medium text-slate-600">Skor:</span><span class="font-bold text-blue-700">${result.gad7_total}/21</span></div>
-                            <div class="flex justify-between items-center"><span class="font-medium text-slate-600">Kategori:</span><span class="font-semibold text-blue-600 px-2 py-1 bg-blue-100 rounded-full text-xs">${gad7Category}</span></div>
+                            <div class="flex justify-between items-start gap-2"><span class="font-medium text-slate-600 shrink-0">Kategori:</span><span class="font-semibold text-blue-600 px-2 py-1 bg-blue-100 rounded-full text-xs text-right">${gad7Category}</span></div>
                         </div>
+                    </div>
+                    <div class="bg-gradient-to-br from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-200 md:col-span-2 lg:col-span-3">
+                        <div class="flex items-center gap-2 mb-4"><div class="w-3 h-3 bg-orange-500 rounded-full"></div><p class="font-bold text-slate-700 text-sm">MASLACH BURNOUT INVENTORY</p></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                            <div class="text-center"><p class="font-medium text-slate-600 mb-2 min-h-[2.5rem] flex items-center justify-center">Kelelahan Emosional</p><div class="bg-white p-3 rounded-lg border border-orange-200"><p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_emosional_total}</p><span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${mbiEmosionalCategory}</span></div></div>
+                            <div class="text-center"><p class="font-medium text-slate-600 mb-2 min-h-[2.5rem] flex items-center justify-center">Sikap Sinis</p><div class="bg-white p-3 rounded-lg border border-orange-200"><p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_sinis_total}</p><span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${mbiSinisCategory}</span></div></div>
+                            <div class="text-center"><p class="font-medium text-slate-600 mb-2 min-h-[2.5rem] flex items-center justify-center">Pencapaian Pribadi</p><div class="bg-white p-3 rounded-lg border border-orange-200"><p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_pencapaian_total}</p><span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${mbiPencapaianCategory}</span></div></div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-orange-200 text-center"><p class="font-medium text-slate-600">Total Skor: <span class="font-bold text-orange-700 text-lg">${mbiTotalScore}</span><br><span class="font-semibold text-orange-600 px-2 py-1 bg-orange-100 rounded-full text-xs">${mbiTotalCategory}</span></p></div>
                     </div>
                     <div class="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-lg border border-purple-200">
                         <div class="flex items-center gap-2 mb-3"><div class="w-3 h-3 bg-purple-500 rounded-full"></div><p class="font-bold text-slate-700 text-sm">KESSLER (K10)</p></div>
                         <div class="space-y-2 text-sm">
                             <div class="flex justify-between items-center"><span class="font-medium text-slate-600">Skor:</span><span class="font-bold text-purple-700">${result.k10_total}/50</span></div>
-                            <div class="flex justify-between items-center"><span class="font-medium text-slate-600">Kategori:</span><span class="font-semibold text-purple-600 px-2 py-1 bg-purple-100 rounded-full text-xs">${k10Category}</span></div>
+                            <div class="flex justify-between items-start gap-2"><span class="font-medium text-slate-600 shrink-0">Kategori:</span><span class="font-semibold text-purple-600 px-2 py-1 bg-purple-100 rounded-full text-xs text-right">${k10Category}</span></div>
                         </div>
-                    </div>
-                    <div class="bg-gradient-to-br from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-200 md:col-span-2 lg:col-span-3">
-                        <div class="flex items-center gap-2 mb-4"><div class="w-3 h-3 bg-orange-500 rounded-full"></div><p class="font-bold text-slate-700 text-sm">MASLACH BURNOUT INVENTORY</p></div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                            <div class="text-center"><p class="font-medium text-slate-600 mb-2">Kelelahan Emosional</p><div class="bg-white p-3 rounded-lg border border-orange-200"><p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_emosional_total}</p><span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${mbiEmosionalCategory}</span></div></div>
-                            <div class="text-center"><p class="font-medium text-slate-600 mb-2">Sikap Sinis</p><div class="bg-white p-3 rounded-lg border border-orange-200"><p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_sinis_total}</p><span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${mbiSinisCategory}</span></div></div>
-                            <div class="text-center"><p class="font-medium text-slate-600 mb-2">Pencapaian Pribadi</p><div class="bg-white p-3 rounded-lg border border-orange-200"><p class="text-2xl font-bold text-orange-600 mb-1">${result.mbi_pencapaian_total}</p><span class="font-semibold text-orange-600 text-xs bg-orange-100 px-2 py-1 rounded-full">${mbiPencapaianCategory}</span></div></div>
-                        </div>
-                        <div class="mt-4 pt-3 border-t border-orange-200 text-center"><p class="font-medium text-slate-600">Total Skor: <span class="font-bold text-orange-700 text-lg">${mbiTotalScore}</span><br><span class="font-semibold text-orange-600 px-2 py-1 bg-orange-100 rounded-full text-xs">${mbiTotalCategory}</span></p></div>
                     </div>
                     <div class="bg-gradient-to-br from-red-50 to-rose-50 p-4 rounded-lg border border-red-200 md:col-span-2 lg:col-span-3">
                         <div class="flex items-center gap-2 mb-4"><div class="w-3 h-3 bg-red-500 rounded-full"></div><p class="font-bold text-slate-700 text-sm">NAQ-R (PERUNDUNGAN)</p></div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                            <div class="text-center"><p class="font-medium text-slate-600 mb-2">Perundungan Pribadi</p><div class="bg-white p-3 rounded-lg border border-red-200"><p class="text-2xl font-bold text-red-600">${result.naqr_pribadi_total}</p></div></div>
-                            <div class="text-center"><p class="font-medium text-slate-600 mb-2">Perundungan Pekerjaan</p><div class="bg-white p-3 rounded-lg border border-red-200"><p class="text-2xl font-bold text-red-600">${result.naqr_pekerjaan_total}</p></div></div>
-                            <div class="text-center"><p class="font-medium text-slate-600 mb-2">Intimidasi</p><div class="bg-white p-3 rounded-lg border border-red-200"><p class="text-2xl font-bold text-red-600">${result.naqr_intimidasi_total}</p></div></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                            <div class="text-center"><p class="font-medium text-slate-600 mb-2 min-h-[2.5rem] flex items-center justify-center">Perundungan Pribadi</p><div class="bg-white p-3 rounded-lg border border-red-200"><p class="text-2xl font-bold text-red-600">${result.naqr_pribadi_total}</p></div></div>
+                            <div class="text-center"><p class="font-medium text-slate-600 mb-2 min-h-[2.5rem] flex items-center justify-center">Perundungan Pekerjaan</p><div class="bg-white p-3 rounded-lg border border-red-200"><p class="text-2xl font-bold text-red-600">${result.naqr_pekerjaan_total}</p></div></div>
+                            <div class="text-center"><p class="font-medium text-slate-600 mb-2 min-h-[2.5rem] flex items-center justify-center">Intimidasi</p><div class="bg-white p-3 rounded-lg border border-red-200"><p class="text-2xl font-bold text-red-600">${result.naqr_intimidasi_total}</p></div></div>
                         </div>
-                        <div class="mt-4 pt-3 border-t border-red-200 text-center"><p class="font-medium text-slate-600">Total Skor: <span class="font-bold text-red-700 text-lg">${naqrTotalScore}</span><br><span class="font-semibold text-red-600 px-2 py-1 bg-red-100 rounded-full text-xs">${naqrCategory}</span></p></div>
+                        <div class="mt-4 pt-3 border-t border-red-200 text-center">
+                            <p class="font-medium text-slate-600">Total Skor: <span class="font-bold text-red-700 text-lg">${naqrDisplayTotalScore}</span><br><span class="font-semibold text-red-600 px-2 py-1 bg-red-100 rounded-full text-xs">${naqrCategory}</span></p>
+                        </div>
+                        ${naqrBullyingDetailsHTML || ''}
                     </div>
                 </div>
             </div>
@@ -1036,9 +1082,9 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const [label, value] of Object.entries(biodataFields)) {
                 const style = styles[styleIndex % styles.length];
                 biodataHtml += `
-                    <div class="p-4 bg-gradient-to-br ${style.bg} rounded-lg border-l-4 ${style.border}">
+                    <div class="p-4 bg-gradient-to-br ${style.bg} rounded-lg border-l-4 ${style.border} min-w-0">
                         <strong class="font-semibold ${style.text} block text-sm">${label}</strong>
-                        <span class="text-slate-700 font-medium">${value !== null && value !== undefined ? value : 'N/A'}</span>
+                        <span class="text-slate-700 font-medium break-words whitespace-normal">${value !== null && value !== undefined ? value : 'N/A'}</span>
                     </div>
                 `;
                 styleIndex++;
@@ -1073,12 +1119,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const editProfileBtn = document.getElementById('edit-profile-btn');
 
         // Tampilkan status memuat
-        profileLoading.classList.remove('hidden');
-        resultsLoading.classList.remove('hidden');
+        if (profileLoading) profileLoading.classList.remove('hidden');
+        if (resultsLoading) resultsLoading.classList.remove('hidden');
 
         try {
             const response = await fetch(`${API_BASE_URL}/users/profile/full`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${token}` },
             });
 
             if (!response.ok) {
@@ -1088,13 +1134,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             // Sembunyikan status memuat
-            profileLoading.classList.add('hidden');
-            resultsLoading.classList.add('hidden');
+            if (profileLoading) profileLoading.classList.add('hidden');
+            if (resultsLoading) resultsLoading.classList.add('hidden');
 
             // Render Biodata
             if (data.biodata_completed && data.biodata) {
-                profileContainer.classList.remove('hidden');
-                profileEmpty.classList.add('hidden');
+                if (profileContainer) profileContainer.classList.remove('hidden');
+                if (profileEmpty) profileEmpty.classList.add('hidden');
 
                 // Simpan data profil saat ini untuk digunakan saat mengedit
                 if(editProfileBtn) {
@@ -1120,14 +1166,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 fillText('profile-status_kehamilan', data.biodata.status_kehamilan);
                 fillText('profile-jumlah_anak', data.biodata.jumlah_anak);
             } else {
-                profileContainer.classList.add('hidden');
-                profileEmpty.classList.remove('hidden');
+                if (profileContainer) profileContainer.classList.add('hidden');
+                if (profileEmpty) profileEmpty.classList.remove('hidden');
             }
 
             // Render Riwayat Hasil Kuesioner
             if (data.health_results_completed && data.health_results && data.health_results.length > 0) {
-                resultsContainer.classList.remove('hidden');
-                resultsEmpty.classList.add('hidden');
+                if (resultsContainer) resultsContainer.classList.remove('hidden');
+                if (resultsEmpty) resultsEmpty.classList.add('hidden');
 
                 let allResultCards = '';
                 data.health_results.forEach(result => {
@@ -1137,23 +1183,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 resultsContainer.innerHTML = allResultCards;
 
-                // Tambahkan event listener untuk semua tombol hapus
-                document.querySelectorAll('.delete-result-btn').forEach(button => {
-                    button.addEventListener('click', handleDeleteResult);
-                });
             } else {
-                resultsContainer.classList.add('hidden');
-                resultsEmpty.classList.remove('hidden');
+                if (resultsContainer) resultsContainer.classList.add('hidden');
+                if (resultsEmpty) resultsEmpty.classList.remove('hidden');
             }
 
         } catch (error) {
             console.error('Error rendering profile page:', error);
-            profileLoading.classList.add('hidden');
-            resultsLoading.classList.add('hidden');
-            profileEmpty.classList.remove('hidden');
-            profileEmpty.firstElementChild.textContent = 'Gagal memuat data profil. Silakan coba lagi.';
-            resultsEmpty.classList.remove('hidden');
-            resultsEmpty.firstElementChild.textContent = 'Gagal memuat riwayat.';
+            if (profileLoading) profileLoading.classList.add('hidden');
+            if (resultsLoading) resultsLoading.classList.add('hidden');
+            if (profileEmpty) profileEmpty.classList.remove('hidden');
+            if (profileEmpty?.firstElementChild) profileEmpty.firstElementChild.textContent = 'Gagal memuat data profil. Silakan coba lagi.';
+            if (resultsEmpty) resultsEmpty.classList.remove('hidden');
+            if (resultsEmpty?.firstElementChild) resultsEmpty.firstElementChild.textContent = 'Gagal memuat riwayat.';
         }
 
     }
@@ -1238,33 +1280,6 @@ document.addEventListener('DOMContentLoaded', () => {
         window.onclick = (event) => { if (event.target == modal) modal.classList.add('hidden'); }
     }
 
-    async function handleDeleteResult(event) {
-        const button = event.target;
-        const resultId = button.dataset.resultId;
-
-        if (confirm('Apakah Anda yakin ingin menghapus riwayat ini?')) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/users/profile/results/${resultId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    // Hapus kartu dari DOM
-                    const cardToRemove = document.getElementById(`result-card-${resultId}`);
-                    if (cardToRemove) {
-                        cardToRemove.remove();
-                    }
-                } else {
-                    alert('Gagal menghapus riwayat.');
-                }
-            } catch (error) {
-                console.error('Error deleting result:', error);
-                alert('Terjadi kesalahan saat mencoba menghapus riwayat.');
-            }
-        }
-    }
-
     function startChatMode() {
         initialScreen.classList.add('hidden');
         quizFooter.classList.add('hidden');
@@ -1285,6 +1300,10 @@ document.addEventListener('DOMContentLoaded', () => {
         resetButton.addEventListener('click', (e) => {
             e.preventDefault();
             if (confirm('Apakah Anda yakin ingin mengulang kuesioner? Riwayat sebelumnya akan tetap tersimpan.')) {
+                // Hapus kelas flex yang ditambahkan untuk layar sambutan agar chat normal kembali
+                if (chatOutput) {
+                    chatOutput.classList.remove('flex', 'flex-col', 'items-center', 'justify-center');
+                }
                 chatOutput.innerHTML = '';
                 quizFooter.innerHTML = '';
                 startQuestionnaire('who5');
@@ -1297,6 +1316,11 @@ document.addEventListener('DOMContentLoaded', () => {
         questionnaireState.currentQuestionIndex = 0;
         questionnaireState.scores[type] = [];
         
+        // Pastikan #chat-output tidak lagi dalam mode flex-center saat kuesioner dimulai
+        if (chatOutput) {
+            chatOutput.classList.remove('flex', 'flex-col', 'items-center', 'justify-center');
+        }
+
         const data = await fetchQuestionnaireData(type);
         if (data) {
             askQuestion(data);
@@ -1320,12 +1344,40 @@ document.addEventListener('DOMContentLoaded', () => {
     function askQuestion(data) {
         const qIndex = questionnaireState.currentQuestionIndex;
         const question = data.questions[qIndex];
-        
-        addMessageToChat('bot', `(${qIndex + 1}/${data.questions.length}) ${question}`);
-        renderOptions(data.options);
+
+        // Tampilkan teks pertanyaan. Untuk NAQ-R, pertanyaan adalah objek, jadi kita ambil `question.text`.
+        const questionText = (typeof question === 'string' ? question : question.text) || '';
+        addMessageToChat('bot', `(${qIndex + 1}/${data.questions.length}) ${questionText}`);
+
+        const chatInterface = document.getElementById('chat-interface'); // NOSONAR
+        const options = (typeof question === 'object' && question.options) ? question.options : data.options;
+
+        // Cek apakah pertanyaan ini adalah pertanyaan isian (tidak punya opsi)
+        if (!options || options.length === 0) {
+            questionnaireState.isTextInputMode = true;
+            if (quizFooter) quizFooter.classList.add('hidden'); // Sembunyikan footer tombol
+            if (chatInterface) chatInterface.classList.remove('hidden'); // Tampilkan input chat
+            // Focus ke input untuk kemudahan user
+            setTimeout(() => {
+                if (chatInput) chatInput.focus();
+            }, 100);
+            // Handler untuk submit teks akan diatur di event listener utama
+        } else {
+            questionnaireState.isTextInputMode = false;
+            // Jangan sembunyikan chatInterface jika kuesioner sudah selesai dan masuk mode chat bebas
+            if (questionnaireState.current !== null) {
+                if (chatInterface) chatInterface.classList.add('hidden');
+            }
+            renderOptions(options);
+        }
     }
 
     function renderOptions(options) {
+        // Pastikan input chat disembunyikan saat merender opsi tombol
+        const chatInterface = document.getElementById('chat-interface');
+        if (chatInterface) chatInterface.classList.add('hidden');
+        questionnaireState.isTextInputMode = false;
+
         quizFooter.innerHTML = '';
         quizFooter.classList.remove('hidden');
         options.forEach(opt => {
@@ -1345,14 +1397,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleOptionClick(e) {
-        const score = parseInt(e.target.dataset.score, 10);
+        // Jika sedang dalam mode input teks, jangan proses klik tombol opsi (pengaman)
+        if (questionnaireState.isTextInputMode) return;
+
+        const scoreValue = e.target.dataset.score;
+        const score = scoreValue !== undefined ? parseInt(scoreValue, 10) : 0;
         const text = e.target.textContent;
         const currentType = questionnaireState.current;
+        const qIndex = questionnaireState.currentQuestionIndex;
 
         addMessageToChat('user', text);
         questionnaireState.scores[currentType].push(score);
-        questionnaireState.currentQuestionIndex++;
 
+        // --- LOGIKA BARU: Penanganan khusus untuk pertanyaan naqr_perundungan no. 80 ---
+        // Pertanyaan no. 80 adalah pertanyaan pertama (indeks 0) di kuesioner 'naqr_perundungan'.
+        if (currentType === 'naqr_perundungan' && qIndex === 0 && score === 1) {
+            // Jika user menjawab "Tidak", lewati pertanyaan 81 & 82.
+            // Isi jawaban untuk pertanyaan yang dilewati dengan null agar struktur data tetap konsisten.
+            questionnaireState.scores[currentType].push(null); // Jawaban untuk pertanyaan 81 (aktor)
+            questionnaireState.scores[currentType].push(null); // Jawaban untuk pertanyaan 82 (detail)
+
+            // Setelah mengisi jawaban null, langsung panggil advanceQuestionnaire tanpa argumen
+            // agar bisa langsung submit semua hasil.
+            await advanceQuestionnaire();
+            return;
+        }
+
+        questionnaireState.currentQuestionIndex++;
         const data = await fetchQuestionnaireData(currentType);
         if (questionnaireState.currentQuestionIndex < data.questions.length) {
             askQuestion(data);
@@ -1362,9 +1433,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function advanceQuestionnaire() {
-        const sequence = ['who5', 'gad7', 'k10', 'mbi', 'naqr'];
+    // Fungsi baru untuk menangani submit dari input teks selama kuesioner
+    async function handleTextInputSubmit(message) {
+        if (!message) return;
+
+        addMessageToChat('user', message);
+        chatInput.value = '';
+
+        // Simpan jawaban teks (bukan skor numerik)
+        questionnaireState.scores[questionnaireState.current].push(message);
+        questionnaireState.currentQuestionIndex++;
+
+        const data = await fetchQuestionnaireData(questionnaireState.current);
+        if (questionnaireState.currentQuestionIndex < data.questions.length) {
+            askQuestion(data);
+        } else {
+            await advanceQuestionnaire();
+        }
+    }
+
+    async function advanceQuestionnaire(forceFinish = false) {
+        const sequence = ['who5', 'gad7', 'k10', 'mbi', 'naqr', 'naqr_perundungan'];
         const currentIndex = sequence.indexOf(questionnaireState.current);
+
+        // Jika dipaksa selesai (misalnya dari NAQ-R no. 80), langsung ke submit.
+        if (forceFinish) {
+            await submitAllResults();
+            return;
+        }
 
         if (currentIndex < sequence.length - 1) {
             const nextType = sequence[currentIndex + 1];
@@ -1372,6 +1468,10 @@ document.addEventListener('DOMContentLoaded', () => {
             await startQuestionnaire(nextType);
         } else {
             // Semua kuesioner selesai
+            // Sembunyikan antarmuka input setelah pertanyaan terakhir selesai
+            const chatInterface = document.getElementById('chat-interface');
+            if (chatInterface) chatInterface.classList.add('hidden');
+            questionnaireState.isTextInputMode = false;
             await submitAllResults();
         }
     }
@@ -1380,27 +1480,52 @@ document.addEventListener('DOMContentLoaded', () => {
         quizFooter.classList.add('hidden');
         statusMessage.textContent = 'Menyimpan hasil Anda...';
         statusMessage.classList.remove('hidden');
+        // Ambil jawaban dari kuesioner naqr_perundungan
+        const naqrPerundunganScores = questionnaireState.scores.naqr_perundungan || [];
+        const naqr_bullying_experience = naqrPerundunganScores[0] || null;
+        // Gunakan null untuk field yang tidak diisi — backend biasanya mengharapkan null, bukan empty string
+        const naqr_bullying_actors = naqrPerundunganScores[1] || null;
+        const naqr_bullying_perpetrators_detail = naqrPerundunganScores[2] || null;
 
-        // Kalkulasi sub-skala NAQR di frontend
-        // Indeks (0-based) sesuai dengan pertanyaan di profiling_service.py
-        const naqr_pribadi_indices = [1, 4, 5, 6, 8, 9, 11, 14, 16, 19, 21];
-        const naqr_pekerjaan_indices = [0, 2, 3, 13, 15, 18, 20];
-        const naqr_intimidasi_indices = [7, 10, 12, 17];
-        const naqrScores = questionnaireState.scores.naqr;
-
-        const calculateSubscale = (indices) => indices.reduce((sum, index) => sum + (naqrScores[index] || 0), 0);
+        // Normalisasi dan susun payload sesuai kontrak backend.
+        // Pastikan `naqr_scores` adalah array berisi 22 jawaban mentah (null jika tidak ada).
+        const naqrRaw = questionnaireState.scores.naqr || [];
+        const naqr_scores = Array.from({ length: 22 }, (_, i) => {
+            const v = naqrRaw[i];
+            if (v === undefined) return null; // Jawaban tidak diisi
+            // Jika berupa string kosong (mis. untuk field yang dilewati), kirim null
+            if (typeof v === 'string' && v.trim() === '') return null;
+            // Jika jawaban adalah string angka, coba konversi ke number
+            if (typeof v === 'string') {
+                const n = parseInt(v, 10);
+                return Number.isNaN(n) ? v : n;
+            }
+            return v;
+        });
 
         const payload = {
-            who5_total: questionnaireState.scores.who5.reduce((a, b) => a + b, 0),
-            gad7_total: questionnaireState.scores.gad7.reduce((a, b) => a + b, 0),
-            // Skor MBI masih dikirim sebagai array karena sub-skalanya lebih kompleks
-            mbi_scores: questionnaireState.scores.mbi || [],
-            // Skor NAQR sudah dipecah menjadi sub-skala
-            naqr_pribadi_total: calculateSubscale(naqr_pribadi_indices),
-            naqr_pekerjaan_total: calculateSubscale(naqr_pekerjaan_indices),
-            naqr_intimidasi_total: calculateSubscale(naqr_intimidasi_indices),
-            k10_total: questionnaireState.scores.k10.reduce((a, b) => a + b, 0),
+            // Kirim skor total untuk kuesioner sederhana
+            who5_total: (questionnaireState.scores.who5 || []).reduce((a, b) => a + (Number(b) || 0), 0),
+            gad7_total: (questionnaireState.scores.gad7 || []).reduce((a, b) => a + (Number(b) || 0), 0),
+            k10_total: (questionnaireState.scores.k10 || []).reduce((a, b) => a + (Number(b) || 0), 0),
+
+            // Kirim array skor mentah untuk MBI dan NAQ-R sesuai permintaan backend
+            mbi_scores: (questionnaireState.scores.mbi || []).flat(),
+            naqr_scores: naqr_scores,
+
+            // Kirim jawaban untuk pertanyaan tambahan NAQ-R
+            naqr_bullying_experience: naqr_bullying_experience,
+            naqr_bullying_actors: naqr_bullying_actors,
+            naqr_bullying_perpetrators_detail: naqr_bullying_perpetrators_detail,
         };
+
+        // Hapus field total NAQ-R yang tidak seharusnya dikirim jika ada
+        delete payload.naqr_pribadi_total;
+        delete payload.naqr_pekerjaan_total;
+        delete payload.naqr_intimidasi_total;
+
+        // Debug: tampilkan payload di konsol agar mudah dilacak saat terjadi error 422
+        console.debug('Submitting health results payload:', payload);
         
         try {
             const response = await fetch(`${API_BASE_URL}/users/profile/results`, {
@@ -1412,84 +1537,84 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) throw new Error('Failed to save results');
+            if (!response.ok) {
+                // Try to parse response body for better debugging
+                let errorBody;
+                try {
+                    errorBody = await response.json();
+                } catch (e) {
+                    try {
+                        errorBody = await response.text();
+                    } catch (ee) {
+                        errorBody = response.statusText;
+                    }
+                }
+                console.error('Save results failed', { status: response.status, body: errorBody, payload });
+                // Show details in UI as well for easier debugging (short)
+                addMessageToChat('bot', `<div class="text-xs text-red-600">Server menolak payload: ${response.status} — lihat console untuk detail.</div>`);
+                throw new Error(`Failed to save results: ${response.status} ${JSON.stringify(errorBody)}`);
+            }
 
             const resultSummary = await response.json();
             statusMessage.classList.add('hidden');
-            
-            // Tampilkan ringkasan hasil dengan format yang lebih baik (mirip Telegram)
-            let summaryHtml = `
-                <div class="survey-results-container bg-gradient-to-b from-emerald-50 to-blue-50 p-6 rounded-lg border-2 border-emerald-300 max-w-2xl">
-                    <h2 class="text-2xl font-bold text-emerald-700 mb-6">✨ Survey Selesai!</h2>
-                    <div class="space-y-4">
-            `;
-            
-            // Iterasi melalui setiap hasil kuesioner
-            for (const [key, value] of Object.entries(resultSummary.summary)) {
-                // Pilih warna berdasarkan kategori / kuesioner
-                let borderColor = 'border-emerald-400';
-                let bgColor = 'bg-gradient-to-r from-emerald-50 to-green-50';
-                let titleColor = 'text-emerald-700';
-                
-                if (key.includes('WHO-5') || key.includes('Well')) {
-                    borderColor = 'border-emerald-400';
-                    bgColor = 'bg-gradient-to-r from-emerald-50 to-green-50';
-                    titleColor = 'text-emerald-700';
-                } else if (key.includes('GAD') || key.includes('Anxiety')) {
-                    borderColor = 'border-blue-400';
-                    bgColor = 'bg-gradient-to-r from-blue-50 to-cyan-50';
-                    titleColor = 'text-blue-700';
-                } else if (key.includes('K10') || key.includes('Kessler')) {
-                    borderColor = 'border-purple-400';
-                    bgColor = 'bg-gradient-to-r from-purple-50 to-violet-50';
-                    titleColor = 'text-purple-700';
-                } else if (key.includes('MBI') || key.includes('Burnout')) {
-                    borderColor = 'border-orange-400';
-                    bgColor = 'bg-gradient-to-r from-orange-50 to-amber-50';
-                    titleColor = 'text-orange-700';
-                } else if (key.includes('NAQ') || key.includes('Perundungan')) {
-                    borderColor = 'border-red-400';
-                    bgColor = 'bg-gradient-to-r from-red-50 to-rose-50';
-                    titleColor = 'text-red-700';
+
+            let resultToDisplay = null;
+
+            // Cek jika format respons adalah { summary: { ... } }
+            if (resultSummary.summary) {
+                const s = resultSummary.summary;
+                const naqrDetails = s['Detail Pengalaman Perundungan'] || {};
+
+                // Buat objek datar (flat object) dari respons bersarang (nested)
+                resultToDisplay = {
+                    id: resultSummary.id || 'latest',
+                    created_at: resultSummary.created_at || new Date().toISOString(),
+                    who5_total: s['WHO-5']?.score ?? 0,
+                    gad7_total: s['GAD-7']?.score ?? 0,
+                    k10_total: s['K-10']?.score ?? 0,
+                    mbi_emosional_total: s['MBI-EE']?.score ?? 0,
+                    mbi_sinis_total: s['MBI-CYN']?.score ?? 0,
+                    mbi_pencapaian_total: s['MBI-PA']?.score ?? 0,
+                    // Hitung sub-skor NAQ-R dari jawaban mentah yang disimpan di frontend
+                    // karena backend tidak menyediakannya dalam respons ringkasan.
+                    naqr_pribadi_total: (questionnaireState.scores.naqr || []).slice(0, 9).reduce((a, b) => a + (Number(b) || 0), 0),
+                    naqr_pekerjaan_total: (questionnaireState.scores.naqr || []).slice(9, 16).reduce((a, b) => a + (Number(b) || 0), 0),
+                    naqr_intimidasi_total: (questionnaireState.scores.naqr || []).slice(16, 22).reduce((a, b) => a + (Number(b) || 0), 0),
+                    // Ambil detail perundungan dari objeknya
+                    naqr_bullying_experience: naqrDetails['Pengalaman'] ?? null,
+                    naqr_bullying_actors: naqrDetails['Pelaku'] ?? null,
+                    naqr_bullying_perpetrators_detail: naqrDetails['Detail Pelaku'] ?? null,
+                };
+
+                // Pastikan total skor NAQ-R dari backend (jika ada) digunakan untuk kategori,
+                // sementara sub-skor yang dihitung ditampilkan secara individual.
+                if (s['NAQ-R Total']?.score !== undefined) {
+                    resultToDisplay.naqr_total_for_category = s['NAQ-R Total'].score;
                 }
-                
-                // Tentukan badge kategori berdasarkan interpretasi
-                let categoryBadgeClass = 'bg-gray-100 text-gray-700';
-                const interpretation = value.interpretation || '';
-                if (interpretation.includes('Tinggi') || interpretation.includes('Berat') || interpretation.includes('Sangat')) {
-                    categoryBadgeClass = 'bg-red-100 text-red-700 font-bold';
-                } else if (interpretation.includes('Sedang')) {
-                    categoryBadgeClass = 'bg-yellow-100 text-yellow-700 font-bold';
-                } else if (interpretation.includes('Ringan') || interpretation.includes('Minimal') || interpretation.includes('Rendah')) {
-                    categoryBadgeClass = 'bg-green-100 text-green-700 font-bold';
-                }
-                
-                summaryHtml += `
-                    <div class="${bgColor} ${borderColor} border-l-4 p-4 rounded-lg">
-                        <p class="${titleColor} font-bold text-lg mb-3">${key}</p>
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-gray-700 font-semibold">Skor:</span>
-                            <span class="text-xl font-bold text-gray-800">${value.score}</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-gray-700 font-semibold">Kategori:</span>
-                            <span class="px-3 py-1 rounded-full text-sm font-bold ${categoryBadgeClass}">${interpretation}</span>
-                        </div>
-                    </div>
-                `;
+            } else {
+                // Fallback jika backend mengembalikan format lain (misalnya, objek datar)
+                resultToDisplay = resultSummary;
             }
-            
-            summaryHtml += `
-                    </div>
-                    <div class="mt-6 pt-4 border-t-2 border-emerald-300">
-                        <p class="text-center text-emerald-700 font-semibold text-lg">
-                            🎯 Anda sekarang dapat memulai percakapan dengan asisten kesehatan mental kami.
-                        </p>
-                    </div>
-                </div>
-            `;
-            
-            addMessageToChat('bot', summaryHtml);
+
+            // Use the existing profile-style card renderer to keep UI consistent
+            try {
+                // Pastikan objek yang akan dirender tidak null atau kosong
+                if (!resultToDisplay || !resultToDisplay.created_at) {
+                    throw new Error("Objek hasil yang diterima kosong atau tidak valid.");
+                }
+                const cardHtml = createHealthResultCardHTML(resultToDisplay, false);
+                addMessageToChat('bot', cardHtml);
+
+            } catch (renderErr) {
+                // If something goes wrong, fall back to a compact summary text
+                console.error('Error rendering result card:', renderErr, 'Data:', resultToDisplay);
+                let fallback = `
+                    <div class="text-red-600 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p><strong>Survey Selesai!</strong></p>
+                        <p class="text-sm">Gagal menampilkan kartu hasil. Silakan lihat riwayat Anda di halaman profil.</p>
+                    </div>`;
+                addMessageToChat('bot', fallback);
+            }
 
             // Reset state untuk chat berikutnya
             questionnaireState = { current: null, scores: {}, currentQuestionIndex: 0 };
@@ -1501,22 +1626,72 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- Logika untuk Fitur Chat ---
+    if (sendChatButton && chatInput) {
+        const performAction = async () => {
+            const message = chatInput.value.trim();
+            if (questionnaireState.isTextInputMode) {
+                await handleTextInputSubmit(message);
+            } else if (questionnaireState.current === null && message) { // Hanya aktifkan chat jika kuesioner tidak berjalan
+                await handleSendMessage(message);
+            }
+        };
+
+        sendChatButton.addEventListener('click', performAction);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Mencegah newline di textarea
+                performAction();
+            }
+        });
+    }
+
+    async function handleSendMessage(message) {
+        // Tampilkan pesan pengguna dan bersihkan input
+        addMessageToChat('user', message);
+        chatInput.value = '';
+        sendChatButton.disabled = true;
+        chatInput.disabled = true;
+
+        // Tampilkan indikator loading
+        const loadingIndicator = addMessageToChat('bot', '<div class="typing-indicator"><span></span><span></span><span></span></div>');
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/web-chat/`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: message
+                })
+            });
+
+            const data = await response.json();
+            loadingIndicator.innerHTML = data.response || data.detail || 'Terjadi kesalahan.';
+
+        } catch (error) {
+            console.error('Error sending chat message:', error);
+            loadingIndicator.innerHTML = 'Gagal terhubung ke server. Silakan coba lagi.';
+        } finally {
+            sendChatButton.disabled = false;
+            chatInput.disabled = false;
+            chatInput.focus(); // Kembalikan fokus ke input
+        }
+    }
+
     function addMessageToChat(sender, text) {
         const messageDiv = document.createElement('div');
-        // Pastikan chat container memiliki tinggi yang tepat
-        chatOutput.style.maxHeight = '400px'; // Atur sesuai kebutuhan
+        chatOutput.style.maxHeight = '400px';
         chatOutput.style.overflowY = 'auto';
         messageDiv.className = `p-3 rounded-lg max-w-lg ${sender === 'user' ? 'bg-emerald-500 text-white self-end ml-auto' : 'bg-slate-200 text-slate-800 self-start'}`;
         messageDiv.innerHTML = text;
-        
+
         if (chatOutput) {
             chatOutput.appendChild(messageDiv);
-            
-            // Scroll otomatis ke bawah dengan behavior smooth
-            chatOutput.scrollTo({
-                top: chatOutput.scrollHeight,
-                behavior: 'smooth'
-            });
+            chatOutput.scrollTo({ top: chatOutput.scrollHeight, behavior: 'smooth' });
         }
+        return messageDiv;
     }
 });
